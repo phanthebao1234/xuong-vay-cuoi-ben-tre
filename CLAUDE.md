@@ -87,8 +87,8 @@ Luxury Editorial Bridal Fashion. Tokens: ivory `#FBF9F4`, warm-white `#FFFDF9`, 
 
 ## 7. Routes
 
-**Implemented:** `/` (production homepage, 10 editorial sections, ISR 5m) · `/collections` (index over real categories, ISR 5m) · `/collections/[slug]` (dynamic: hero + grid + prev/next pagination; unknown slug → 404 only when API confirms; API failure → degraded editorial state) · branded `not-found.tsx`. Global shell wraps all routes; Header renders its `transparent` variant on `/` automatically. Category slugs resolve through the cached categories list — the backend has no slug-retrieve for categories.
-**Planned** (purpose/SEO/conversion/API table in docs/ARCHITECTURE.md §5): `/collections`, `/collections/[slug]`, `/wedding-dresses`, `/wedding-dresses/[slug]`, `/suits`, `/suits/[slug]`, `/ao-dai`, `/ao-dai/[slug]`, `/rental`, `/appointment`, `/about`, `/contact`.
+**Implemented:** `/` (production homepage, 10 editorial sections, ISR 5m) · `/collections` (index over real categories, ISR 5m) · `/collections/[slug]` (dynamic: hero + grid + prev/next pagination; unknown slug → 404 only when API confirms; API failure → degraded editorial state) · `/wedding-dresses` (dynamic: full clothing catalog — no category slug pinned, see §18 Decision Log 2026-07-10; category/status/ordering/search filters, all link/form-driven with zero client JS; DRF prev/next pagination via shared `src/components/shared/Pagination.tsx`) · branded `not-found.tsx`. Global shell wraps all routes; Header renders its `transparent` variant on `/` automatically. Category slugs resolve through the cached categories list — the backend has no slug-retrieve for categories.
+**Planned** (purpose/SEO/conversion/API table in docs/ARCHITECTURE.md §5): `/wedding-dresses/[slug]` (Phase 5 — `ProductCard` already links here, intentionally 404s until then), `/suits`, `/suits/[slug]`, `/ao-dai`, `/ao-dai/[slug]`, `/rental`, `/appointment`, `/about`, `/contact`.
 `dynamicParams = true` on all detail routes (CMS-created slugs).
 
 ## 8. Data Domain (from FOXIE audit, 2026-07-09)
@@ -118,7 +118,7 @@ Server Components by default; `'use client'` only where interaction demands. `ne
 
 ## 12. Git Safety
 
-inspect first (`git status -sb`, `git diff`) · stage explicit paths only · **never `git add .` / `-A`** · one logical task = one commit · never force push · preserve unrelated changes & untracked user assets · run `npx tsc --noEmit` + `npm run lint` (+ `npm run build` for prod-behavior changes) + `git diff --check` before commit · **no commit/push without explicit approval**. No GitHub remote is configured yet — adding one and the first push require an approved repository URL.
+inspect first (`git status -sb`, `git diff`) · stage explicit paths only · **never `git add .` / `-A`** · one logical task = one commit · never force push · preserve unrelated changes & untracked user assets · run `npx tsc --noEmit` + `npm run lint` (+ `npm run build` for prod-behavior changes) + `git diff --check` before commit · **no commit/push without explicit approval**. GitHub remote `origin` connected 2026-07-09 (`https://github.com/phanthebao1234/xuong-vay-cuoi-ben-tre.git`); `main` pushed and tracked, HEAD in sync as of that date.
 
 ## 13. Shared Backend Safety
 
@@ -139,11 +139,12 @@ Separate Vercel project auto-deploying from this repo's `main` (once created) ·
 | Design tokens & fonts | ✅ DONE | globals.css `@theme` + next/font |
 | API client + types | ✅ DONE | Public-only; rentals services typed |
 | Handbook/docs | ✅ DONE | Full set in docs/ + WORKSPACE.md |
-| Git repository | ✅ INITIALIZED | `main`, baseline commit 2026-07-09; no remote yet |
+| Git repository | ✅ INITIALIZED | `main`, remote `origin` connected + pushed 2026-07-09 |
 | Design system components + global shell | ✅ DONE | Phase 1 (2026-07-09) |
 | Homepage | ✅ DONE | Phase 2 (2026-07-09) |
-| Collection discovery | ✅ DONE | Phase 3 (2026-07-09); uncommitted, awaiting review |
-| Catalog routes | ⏳ PLANNED | Phases 3–6 |
+| Collection discovery | ✅ DONE | Phase 3 (2026-07-09); committed (`22a421b`), pushed |
+| Wedding dress listing | ✅ DONE | Phase 4 (2026-07-10); uncommitted, awaiting review |
+| Catalog routes (remaining) | ⏳ PLANNED | Phases 5–6 (`/wedding-dresses/[slug]`, `/suits`, `/ao-dai`) |
 | Conversion forms | ⏳ PLANNED | Phase 7 — verify submit serializers first |
 | SEO / perf | ⏳ PLANNED | Phases 8–9 |
 | Deployment | ⛔ NOT STARTED | Phases 10–11 |
@@ -151,9 +152,9 @@ Separate Vercel project auto-deploying from this repo's `main` (once created) ·
 
 ## 16. Current Priorities
 
-1. Manual homepage review at `/` (dev: `npm run dev` → http://localhost:3100).
-2. Approve the Phase 3 commit; create the GitHub remote (approved URL required) and push; then Phase 4 (`/wedding-dresses`).
-3. Content prerequisite via FOXIE Admin: categories for váy cưới / vest / áo dài, `is_featured` flags, cover images — homepage data sections light up automatically.
+1. Manual responsive review of `/wedding-dresses` at 375/768/1280/1440 (dev: `npm run dev` → http://localhost:3100) — not visually captured this session, no browser tool available.
+2. Approve a controlled commit covering Phase 3 + Phase 4, then push; then Phase 5 (`/wedding-dresses/[slug]` product detail — also resolves the `ProductCard` 404).
+3. Content prerequisite via FOXIE Admin: categories for vest / áo dài, `is_featured` flags, cover images — needed before Phase 6 category-pinned routes and before homepage data sections beyond the single "Váy" category light up further.
 4. Before Phase 7: read leads/bookings submit serializers from FOXIE source and type the payloads.
 
 ## 17. Known Gaps (from API audit)
@@ -176,12 +177,18 @@ See docs/API_INTEGRATION.md §2 for the full matrix. Headlines: no server-side c
 | 2026-07-09 | Header is the sole client component; menu/scroll state stays inside it | Minimal client boundary, RSC layout preserved |
 | 2026-07-09 | Data-driven homepage sections omit themselves when API data is empty (Lookbook needs ≥ 3 items) | Never fake inventory; editorial sections carry the page |
 | 2026-07-09 | Homepage hero = CSS editorial composition, no stock/competitor imagery | No authorized photography exists yet; swap for CMS media later |
+| 2026-07-09 | GitHub remote `origin` connected to an approved repository URL; `main` pushed | User-approved URL provided; remote verified empty before push, no force needed |
+| 2026-07-10 | `/wedding-dresses` lists the full clothing catalog — no `RentalCategory` slug is pinned as "the wedding dress category" | Only one ambiguous category (`vay`) exists in production; hardcoding it would violate the no-hardcoded-production-data rule and break once more categories exist. Category filter chips (real API data) let users narrow instead. Revisit pinning in Phase 6 once vest/áo dài categories exist |
+| 2026-07-10 | All Phase 4 filters (category, status, ordering, search) are plain links / a native `<form method="get">` — zero client components | Matches the existing pagination pattern (Phase 3); keeps `/wedding-dresses` a pure Server Component, no JS budget added |
+| 2026-07-10 | Extracted `Pagination` into `src/components/shared/Pagination.tsx`, shared by `/collections/[slug]` and `/wedding-dresses` | Avoided duplicating identical DRF prev/next logic across two consumers; zero behavior change to the original |
+| 2026-07-10 | `ProductCard` detail links (`/wedding-dresses/[slug]`) intentionally left 404ing | Phase 5 explicitly out of scope this session; matches the project's existing convention of documented, intentional 404s for unshipped routes |
 
 ## 19. Current Working Tree Snapshot
 
-**⚠️ Point-in-time snapshot from 2026-07-09 — NON-AUTHORITATIVE. Always rerun Git commands; never trust this section over live output.**
+**⚠️ Point-in-time snapshot from 2026-07-10 — NON-AUTHORITATIVE. Always rerun Git commands; never trust this section over live output.**
 
-- Branch `main`, single baseline commit (Phases 0–2), clean working tree, no remote configured.
+- Branch `main`, remote `origin` connected and tracked, 2 commits pushed (Phases 0–3, HEAD = `22a421b`, ahead/behind 0/0 as of 2026-07-09).
+- Working tree currently **not clean**: Phase 4 (`/wedding-dresses`) implemented and verified (`tsc`/`lint`/`build` all pass) but uncommitted — modified `src/features/collections/CollectionDetail.tsx`, new `src/app/wedding-dresses/`, `src/components/shared/Pagination.tsx`, `src/features/clothing/WeddingDressListing.tsx`. Awaiting manual review + commit approval.
 - FOXIE working tree (separate repo at `D:\LEARN\foxie`) had its own pre-existing local modifications (`CLAUDE.md`, `PackageDetailHero.tsx`, 3 untracked PNGs) — they belong to FOXIE tasks and must never be touched from here.
 
 ## 20. Development Workflow (Claude Code / Fable 5)

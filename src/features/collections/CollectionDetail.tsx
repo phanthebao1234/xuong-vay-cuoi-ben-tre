@@ -6,8 +6,8 @@ import { SectionHeading } from '@/components/ui/SectionHeading'
 import { ProductCard } from '@/components/ui/ProductCard'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { Pagination } from '@/components/shared/Pagination'
 import { ROUTES } from '@/lib/constants/routes'
-import { cn } from '@/lib/utils/cn'
 
 interface CollectionDetailProps {
   category: ApiRentalCategory
@@ -76,53 +76,19 @@ export function CollectionDetail({ category, data, page }: CollectionDetailProps
                 ))}
               </div>
               <Pagination
-                basePath={ROUTES.collection(category.slug)}
                 page={page}
                 hasPrevious={data.previous !== null}
                 hasNext={data.next !== null}
+                buildHref={(n) =>
+                  n <= 1
+                    ? ROUTES.collection(category.slug)
+                    : `${ROUTES.collection(category.slug)}?page=${n}`
+                }
               />
             </>
           )}
         </Container>
       </Section>
     </>
-  )
-}
-
-function Pagination({
-  basePath,
-  page,
-  hasPrevious,
-  hasNext,
-}: {
-  basePath: string
-  page: number
-  hasPrevious: boolean
-  hasNext: boolean
-}) {
-  if (!hasPrevious && !hasNext) return null
-
-  const pageHref = (n: number) => (n <= 1 ? basePath : `${basePath}?page=${n}`)
-  const linkClasses =
-    'inline-flex items-center gap-2 border-b border-champagne/60 pb-1 text-[11px] uppercase tracking-[0.22em] transition-colors hover:border-champagne hover:text-champagne-deep'
-
-  return (
-    <nav aria-label="Phân trang" className="mt-14 flex items-center justify-between border-t border-line pt-8">
-      {hasPrevious ? (
-        <Link href={pageHref(page - 1)} className={linkClasses}>
-          ← Trang trước
-        </Link>
-      ) : (
-        <span aria-hidden />
-      )}
-      <span className="text-[10px] uppercase tracking-[0.3em] text-taupe">Trang {page}</span>
-      {hasNext ? (
-        <Link href={pageHref(page + 1)} className={cn(linkClasses, 'text-right')}>
-          Trang sau →
-        </Link>
-      ) : (
-        <span aria-hidden />
-      )}
-    </nav>
   )
 }
