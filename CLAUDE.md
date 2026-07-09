@@ -87,8 +87,8 @@ Luxury Editorial Bridal Fashion. Tokens: ivory `#FBF9F4`, warm-white `#FFFDF9`, 
 
 ## 7. Routes
 
-**Implemented:** `/` (production homepage, 10 editorial sections, ISR 5m) · `/collections` (index over real categories, ISR 5m) · `/collections/[slug]` (dynamic: hero + grid + prev/next pagination; unknown slug → 404 only when API confirms; API failure → degraded editorial state) · `/wedding-dresses` (dynamic: full clothing catalog — no category slug pinned, see §18 Decision Log 2026-07-10; category/status/ordering/search filters, all link/form-driven with zero client JS; DRF prev/next pagination via shared `src/components/shared/Pagination.tsx`) · branded `not-found.tsx`. Global shell wraps all routes; Header renders its `transparent` variant on `/` automatically. Category slugs resolve through the cached categories list — the backend has no slug-retrieve for categories.
-**Planned** (purpose/SEO/conversion/API table in docs/ARCHITECTURE.md §5): `/wedding-dresses/[slug]` (Phase 5 — `ProductCard` already links here, intentionally 404s until then), `/suits`, `/suits/[slug]`, `/ao-dai`, `/ao-dai/[slug]`, `/rental`, `/appointment`, `/about`, `/contact`.
+**Implemented:** `/` (production homepage, 10 editorial sections, ISR 5m) · `/collections` (index over real categories, ISR 5m) · `/collections/[slug]` (dynamic: hero + grid + prev/next pagination; unknown slug → 404 only when API confirms; API failure → degraded editorial state) · `/wedding-dresses` (dynamic: full clothing catalog — no category slug pinned, see §18 Decision Log 2026-07-10; category/status/ordering/search filters, all link/form-driven with zero client JS; DRF prev/next pagination via shared `src/components/shared/Pagination.tsx`) · `/wedding-dresses/[slug]` (dynamic product detail — resolves the `ProductCard` 404 site-wide; gallery + info panel + related designs; see §18 for gallery/CTA/related-products decisions) · branded `not-found.tsx`. Global shell wraps all routes; Header renders its `transparent` variant on `/` automatically. Category slugs resolve through the cached categories list — the backend has no slug-retrieve for categories.
+**Planned** (purpose/SEO/conversion/API table in docs/ARCHITECTURE.md §5): `/suits`, `/suits/[slug]`, `/ao-dai`, `/ao-dai/[slug]`, `/rental`, `/appointment`, `/about`, `/contact`.
 `dynamicParams = true` on all detail routes (CMS-created slugs).
 
 ## 8. Data Domain (from FOXIE audit, 2026-07-09)
@@ -99,7 +99,7 @@ Backend `rentals` app provides publicly (AllowAny list/retrieve):
 - `Accessory` — public list/detail
 - Conversion: `POST /leads/submit/`, `POST /bookings/submit/` (AllowAny; **verify payload serializers before wiring forms**)
 
-Gaps: no color/size/price-range server filters, no curated-collection entity, no availability calendar, public serializer over-exposes internal fields. Full matrix: docs/API_INTEGRATION.md §2.
+Gaps: no color/size/price-range server filters, no curated-collection entity, no availability calendar, public serializer over-exposes internal fields — confirmed 2026-07-10 via live detail response + FOXIE source (`ClothingDetailSerializer` uses `fields = '__all__'`) to include `archived_at` and `created_by` in addition to the previously-known `purchase_date`/`purchase_price`/`last_rental_date`/`rental_count`/`sold_date`/`sold_price`/`retirement_reason`/`quantity`; none of these are typed in `ApiClothingDetail` or rendered anywhere. Full matrix: docs/API_INTEGRATION.md §2.
 
 ## 9. SEO Strategy
 
@@ -143,8 +143,9 @@ Separate Vercel project auto-deploying from this repo's `main` (once created) ·
 | Design system components + global shell | ✅ DONE | Phase 1 (2026-07-09) |
 | Homepage | ✅ DONE | Phase 2 (2026-07-09) |
 | Collection discovery | ✅ DONE | Phase 3 (2026-07-09); committed (`22a421b`), pushed |
-| Wedding dress listing | ✅ DONE | Phase 4 (2026-07-10); uncommitted, awaiting review |
-| Catalog routes (remaining) | ⏳ PLANNED | Phases 5–6 (`/wedding-dresses/[slug]`, `/suits`, `/ao-dai`) |
+| Wedding dress listing | ✅ DONE | Phase 4 (2026-07-10); committed (`b66be0a`), pushed |
+| Wedding dress product detail | ✅ DONE | Phase 5 (2026-07-10); uncommitted, awaiting review |
+| Catalog routes (remaining) | ⏳ PLANNED | Phase 6 (`/suits`, `/ao-dai`) — content-gated |
 | Conversion forms | ⏳ PLANNED | Phase 7 — verify submit serializers first |
 | SEO / perf | ⏳ PLANNED | Phases 8–9 |
 | Deployment | ⛔ NOT STARTED | Phases 10–11 |
@@ -152,14 +153,14 @@ Separate Vercel project auto-deploying from this repo's `main` (once created) ·
 
 ## 16. Current Priorities
 
-1. Manual responsive review of `/wedding-dresses` at 375/768/1280/1440 (dev: `npm run dev` → http://localhost:3100) — not visually captured this session, no browser tool available.
-2. Approve a controlled commit covering Phase 3 + Phase 4, then push; then Phase 5 (`/wedding-dresses/[slug]` product detail — also resolves the `ProductCard` 404).
-3. Content prerequisite via FOXIE Admin: categories for vest / áo dài, `is_featured` flags, cover images — needed before Phase 6 category-pinned routes and before homepage data sections beyond the single "Váy" category light up further.
+1. Review Phase 5 (`/wedding-dresses/[slug]` — gallery, info panel, CTAs, related designs), then approve a controlled commit and push.
+2. Phase 6: reuse the Phase 4/5 listing + detail components for `/suits` and `/ao-dai`.
+3. Content prerequisite via FOXIE Admin: categories for vest / áo dài, `is_featured` flags, product photography — needed before Phase 6 is meaningful, and before the Phase 5 gallery/related-designs sections are exercised by real traffic (today's only real product has 0 images and no category siblings).
 4. Before Phase 7: read leads/bookings submit serializers from FOXIE source and type the payloads.
 
 ## 17. Known Gaps (from API audit)
 
-See docs/API_INTEGRATION.md §2 for the full matrix. Headlines: no server-side color/size/price-range filtering; no curated-collection entity (categories stand in); no availability calendar; no submit throttling; public clothing serializers expose internal lifecycle fields (never render them; backend fix needs cross-project approval).
+See docs/API_INTEGRATION.md §2 for the full matrix. Headlines: no server-side color/size/price-range filtering; no curated-collection entity (categories stand in); no availability calendar; no submit throttling; no "exclude id" or "related products" filter (related designs are derived client-side: fetch by category, filter out the current item, cap the count); public clothing serializers expose internal lifecycle fields including `archived_at` and `created_by` (confirmed 2026-07-10; never render them; backend fix needs cross-project approval).
 
 ## 18. Decision Log
 
@@ -182,14 +183,19 @@ See docs/API_INTEGRATION.md §2 for the full matrix. Headlines: no server-side c
 | 2026-07-10 | All Phase 4 filters (category, status, ordering, search) are plain links / a native `<form method="get">` — zero client components | Matches the existing pagination pattern (Phase 3); keeps `/wedding-dresses` a pure Server Component, no JS budget added |
 | 2026-07-10 | Extracted `Pagination` into `src/components/shared/Pagination.tsx`, shared by `/collections/[slug]` and `/wedding-dresses` | Avoided duplicating identical DRF prev/next logic across two consumers; zero behavior change to the original |
 | 2026-07-10 | `ProductCard` detail links (`/wedding-dresses/[slug]`) intentionally left 404ing | Phase 5 explicitly out of scope this session; matches the project's existing convention of documented, intentional 404s for unshipped routes |
+| 2026-07-10 | Product gallery (`ProductGallery`) only mounts as a client component when `images.length > 0`; 0 images renders a static Server-rendered placeholder instead | Keeps the page fully Server-rendered (zero client JS) for today's real data (the only product has 0 images); avoids paying a client-JS cost for a feature with nothing to show yet |
+| 2026-07-10 | Gallery grid previews use `object-cover` (cropped, consistent with every other image grid sitewide); the full-screen lightbox uses `object-contain` (true, uncropped image) | No image width/height metadata exists in the API, so per-image "preserve aspect ratio" isn't achievable in a fixed-ratio grid — the lightbox is where an uncropped view actually matters (checking fabric/embroidery detail) |
+| 2026-07-10 | Related designs = same-category clothing list, current product excluded client-side by id, capped at 3, section omitted at 0 | No "related products" or "exclude id" backend capability exists; honest derivation from real data only, never fake relationships |
+| 2026-07-10 | CTA links pass `?product={slug}` to `/appointment` and `/contact` even though neither route exists yet | Forward-compatible, zero-risk (unused query param until Phase 7 builds the form to read it); explicit instruction to preserve product context without implementing booking mutation this phase |
+| 2026-07-10 | Non-`available` status replaces the primary booking CTA with a status message + a link to `/wedding-dresses?status=available` | Satisfies the pre-existing documented rule (API_INTEGRATION.md §5): disable inquiry CTA, suggest alternatives, for unavailable products |
 
 ## 19. Current Working Tree Snapshot
 
 **⚠️ Point-in-time snapshot from 2026-07-10 — NON-AUTHORITATIVE. Always rerun Git commands; never trust this section over live output.**
 
-- Branch `main`, remote `origin` connected and tracked, 2 commits pushed (Phases 0–3, HEAD = `22a421b`, ahead/behind 0/0 as of 2026-07-09).
-- Working tree currently **not clean**: Phase 4 (`/wedding-dresses`) implemented and verified (`tsc`/`lint`/`build` all pass) but uncommitted — modified `src/features/collections/CollectionDetail.tsx`, new `src/app/wedding-dresses/`, `src/components/shared/Pagination.tsx`, `src/features/clothing/WeddingDressListing.tsx`. Awaiting manual review + commit approval.
-- FOXIE working tree (separate repo at `D:\LEARN\foxie`) had its own pre-existing local modifications (`CLAUDE.md`, `PackageDetailHero.tsx`, 3 untracked PNGs) — they belong to FOXIE tasks and must never be touched from here.
+- Branch `main`, remote `origin` connected and tracked, 3 commits pushed (Phases 0–4, HEAD = `b66be0a`, ahead/behind 0/0 as of 2026-07-10).
+- Working tree currently **not clean**: Phase 5 (`/wedding-dresses/[slug]`) implemented and verified (`tsc`/`lint`/`build`/`git diff --check` all pass) but uncommitted — modified `src/components/ui/ProductCard.tsx` (exported `STATUS_LABELS`), new `src/app/wedding-dresses/[slug]/page.tsx`, `src/features/clothing/ProductDetail.tsx`, `src/features/clothing/ProductGallery.tsx`. Awaiting review + commit approval.
+- FOXIE working tree (separate repo at `D:\LEARN\foxie`) had its own pre-existing local modifications (`CLAUDE.md`, `PackageDetailHero.tsx`, 3 untracked PNGs) — they belong to FOXIE tasks and must never be touched from here. This session read `backend/apps/rentals/{serializers,views,models}.py` **read-only** for API-contract verification only.
 
 ## 20. Development Workflow (Claude Code / Fable 5)
 

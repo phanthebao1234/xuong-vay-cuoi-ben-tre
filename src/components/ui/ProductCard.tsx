@@ -23,7 +23,7 @@ export type ProductCardData = Pick<
   | 'cover_image_url'
 >
 
-const STATUS_LABELS: Partial<Record<ClothingStatus, string>> = {
+export const STATUS_LABELS: Partial<Record<ClothingStatus, string>> = {
   reserved: 'Đã được đặt',
   rented: 'Đang cho thuê',
   maintenance: 'Tạm ngưng',
