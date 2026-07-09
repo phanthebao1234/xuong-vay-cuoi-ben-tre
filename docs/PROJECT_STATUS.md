@@ -4,7 +4,18 @@
 > Last updated: **2026-07-09** (Phase 2 — production homepage implemented)
 
 ## Current Phase
-**Roadmap Phase 2 implemented → awaiting manual homepage review, then Phase 3 (Collection discovery).**
+**Roadmap Phase 3 implemented → awaiting review, then Phase 4 (Wedding dress listing).**
+
+## Phase 3 (2026-07-09): Collection discovery
+- `/collections` — editorial index over real `/rentals/categories/` (Server Component, ISR 5m); count-adaptive grid (1 → full-width banner, odd count → first tile spans row); distinct states for API-unreachable vs genuinely-empty catalog
+- `/collections/[slug]` — breadcrumb + editorial hero (name, description, design count) + ProductCard grid + prev/next pagination driven by DRF `previous`/`next` (`dynamicParams = true`, dynamic route); unknown slug → real 404 only when the API confirmed it; API failure → degraded editorial state, never a false 404
+- Category slug resolution goes through the cached list (backend has no slug-retrieve for categories — UUID lookup only); one memoized fetch serves both `generateMetadata` and the page
+- New shared components: `CategoryTile` (extracted from home CategoryDiscovery — now reused by both) and `EmptyState` (premium editorial empty/error state)
+- Branded `src/app/not-found.tsx` (404 with header/footer, CTAs home/collections)
+
+## Verification (2026-07-09, Phase 3)
+- `tsc --noEmit` 0 · `lint` 0 · `build` ✅ (`/collections` static ISR 5m; `/collections/[slug]` dynamic)
+- Chrome review: index (1-category banner), `/collections/vay` (breadcrumb, hero, 1-item grid, real production data), unknown slug → branded 404; 375px iframe viewport overflow-free (JS-asserted); zero console errors
 
 ## Phase 2 (2026-07-09): Production homepage
 - `/` showcase replaced by the editorial homepage: `src/features/home/` — `HeroSection` (full-viewport charcoal, transparent header integration), `BrandManifesto`, `CategoryDiscovery` (asymmetric grid from real `/rentals/categories/`, count-adaptive), `EditorialStory` (static, asymmetric), `FeaturedProducts` (`?is_featured=true&status=available`, max 4, omits when empty), `EditorialBreak`, `WhyChooseUs` (numbered editorial, no invented stats), `AppointmentProcess` (3 steps), `LookbookSection` (recent items, mixed ratios, omits below 3 items), `FinalAppointmentCTA`
@@ -41,9 +52,9 @@
 - Nothing blocking development. Launch-time dependency: CORS env-var addition on Railway (Phase 10, approval required).
 
 ## Planned (next)
-1. Manual homepage review → approve/adjust
-2. Phase 3: `/collections` + `/collections/[slug]`
-3. Content prerequisite (via FOXIE Admin): rename/create categories for váy cưới / vest / áo dài, mark products `is_featured`, upload cover images — homepage sections light up automatically
+1. Review homepage + collections, then commit Phase 3 as one controlled commit (approval required)
+2. Phase 4: `/wedding-dresses` listing with supported filters
+3. Content prerequisite (via FOXIE Admin): categories for váy cưới / vest / áo dài, `is_featured` flags, cover images
 
 ## Production Status
 Not deployed. Git repository initialized 2026-07-09 (`main`, single baseline commit covering Phases 0–2); no GitHub remote or Vercel project yet.
@@ -59,4 +70,4 @@ Not deployed. Git repository initialized 2026-07-09 (`main`, single baseline com
 - Header `transparent` variant is implemented but unused until the Phase 2 hero; per-route variant wiring (route group or prop) decided in Phase 2.
 
 ## Next Recommended Action
-Create the private GitHub repository (`xuong-vay-cuoi-ben-tre`), add the remote with the approved URL, push the baseline, then start Phase 3 (Collection discovery).
+Review Phase 3 at `/collections`, approve the controlled commit, create the private GitHub repository and push, then start Phase 4 (Wedding dress listing).

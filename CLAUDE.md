@@ -87,7 +87,7 @@ Luxury Editorial Bridal Fashion. Tokens: ivory `#FBF9F4`, warm-white `#FFFDF9`, 
 
 ## 7. Routes
 
-**Implemented:** `/` — production homepage (10 editorial sections in `src/features/home/`, real API data with graceful omission, ISR 5m, local-SEO metadata). Global shell (AnnouncementBar/Header/Footer) wraps all routes via root layout; Header renders its `transparent` variant on `/` automatically.
+**Implemented:** `/` (production homepage, 10 editorial sections, ISR 5m) · `/collections` (index over real categories, ISR 5m) · `/collections/[slug]` (dynamic: hero + grid + prev/next pagination; unknown slug → 404 only when API confirms; API failure → degraded editorial state) · branded `not-found.tsx`. Global shell wraps all routes; Header renders its `transparent` variant on `/` automatically. Category slugs resolve through the cached categories list — the backend has no slug-retrieve for categories.
 **Planned** (purpose/SEO/conversion/API table in docs/ARCHITECTURE.md §5): `/collections`, `/collections/[slug]`, `/wedding-dresses`, `/wedding-dresses/[slug]`, `/suits`, `/suits/[slug]`, `/ao-dai`, `/ao-dai/[slug]`, `/rental`, `/appointment`, `/about`, `/contact`.
 `dynamicParams = true` on all detail routes (CMS-created slugs).
 
@@ -141,7 +141,8 @@ Separate Vercel project auto-deploying from this repo's `main` (once created) ·
 | Handbook/docs | ✅ DONE | Full set in docs/ + WORKSPACE.md |
 | Git repository | ✅ INITIALIZED | `main`, baseline commit 2026-07-09; no remote yet |
 | Design system components + global shell | ✅ DONE | Phase 1 (2026-07-09) |
-| Homepage | ✅ DONE | Phase 2 (2026-07-09); awaiting manual review |
+| Homepage | ✅ DONE | Phase 2 (2026-07-09) |
+| Collection discovery | ✅ DONE | Phase 3 (2026-07-09); uncommitted, awaiting review |
 | Catalog routes | ⏳ PLANNED | Phases 3–6 |
 | Conversion forms | ⏳ PLANNED | Phase 7 — verify submit serializers first |
 | SEO / perf | ⏳ PLANNED | Phases 8–9 |
@@ -151,7 +152,7 @@ Separate Vercel project auto-deploying from this repo's `main` (once created) ·
 ## 16. Current Priorities
 
 1. Manual homepage review at `/` (dev: `npm run dev` → http://localhost:3100).
-2. Create the GitHub remote (approved URL required), push the baseline, then start Phase 3 (`/collections`).
+2. Approve the Phase 3 commit; create the GitHub remote (approved URL required) and push; then Phase 4 (`/wedding-dresses`).
 3. Content prerequisite via FOXIE Admin: categories for váy cưới / vest / áo dài, `is_featured` flags, cover images — homepage data sections light up automatically.
 4. Before Phase 7: read leads/bookings submit serializers from FOXIE source and type the payloads.
 
