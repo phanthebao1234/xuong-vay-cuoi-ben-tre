@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* ── Xưởng Váy Cưới Bến Tre — Design Tokens ─────────────────────────
+   Luxury Editorial Bridal Fashion.
+   Full definitions and usage rules: docs/DESIGN_SYSTEM.md            */
+
+@theme {
+  /* Colors */
+  --color-ivory: #FBF9F4;        /* primary page background */
+  --color-warm-white: #FFFDF9;   /* cards, elevated surfaces, text on dark */
+  --color-cream: #F3EEE5;        /* alternating section background */
+  --color-champagne: #C0A062;    /* accent — CTAs, rules, highlights */
+  --color-champagne-deep: #A8874C; /* accent hover / pressed */
+  --color-charcoal: #2A2523;     /* primary text, dark sections */
+  --color-taupe: #9C8E80;        /* secondary text, captions, metadata */
+  --color-line: #E9E2D6;         /* hairline borders on light surfaces */
+
+  /* Typography */
+  --font-display: var(--font-display), Georgia, serif;
+  --font-body: var(--font-body), system-ui, sans-serif;
+}
+
+::selection {
+  background: #C0A062;
+  color: #FFFDF9;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Accessible, on-brand focus ring everywhere */
+:focus-visible {
+  outline: 2px solid #C0A062;
+  outline-offset: 3px;
+}
+
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
