@@ -14,12 +14,25 @@ interface ProductDetailProps {
   /** null = the clothing detail API failed — distinct from an API-confirmed unknown slug (that's a 404, handled by the route) */
   product: ApiClothingDetail | null
   related: ApiClothingListItem[]
+  /** Route configuration — defaults preserve exact /wedding-dresses/[slug] behavior */
+  listingPath?: string
+  detailPath?: (slug: string) => string
+  breadcrumbFallbackLabel?: string
+  ctaLabel?: string
 }
 
-function Breadcrumb({ product }: { product: ApiClothingDetail | null }) {
+function Breadcrumb({
+  product,
+  listingPath,
+  breadcrumbFallbackLabel,
+}: {
+  product: ApiClothingDetail | null
+  listingPath: string
+  breadcrumbFallbackLabel: string
+}) {
   const categoryHref = product?.category_slug
-    ? `${ROUTES.weddingDresses}?category=${product.category_slug}`
-    : ROUTES.weddingDresses
+    ? `${listingPath}?category=${product.category_slug}`
+    : listingPath
 
   return (
     <p className="text-[10px] uppercase tracking-[0.3em] text-taupe">
@@ -28,7 +41,7 @@ function Breadcrumb({ product }: { product: ApiClothingDetail | null }) {
       </Link>
       <span aria-hidden className="mx-2 text-champagne">·</span>
       <Link href={categoryHref} className="transition-colors hover:text-champagne-deep">
-        {product?.category_name ?? 'Váy cưới'}
+        {product?.category_name ?? breadcrumbFallbackLabel}
       </Link>
       {product && (
         <>
@@ -40,13 +53,20 @@ function Breadcrumb({ product }: { product: ApiClothingDetail | null }) {
   )
 }
 
-/** Editorial product detail — gallery + info panel + related designs, all from real API data. */
-export function ProductDetail({ product, related }: ProductDetailProps) {
+/** Editorial product detail — gallery + info panel + related designs, all from real API data. Reused by /wedding-dresses, /suits, /ao-dai. */
+export function ProductDetail({
+  product,
+  related,
+  listingPath = ROUTES.weddingDresses,
+  detailPath = ROUTES.weddingDress,
+  breadcrumbFallbackLabel = 'Váy cưới',
+  ctaLabel = 'Đặt lịch thử váy',
+}: ProductDetailProps) {
   if (!product) {
     return (
       <Section tone="cream" className="min-h-[60vh]">
         <Container width="wide">
-          <Breadcrumb product={null} />
+          <Breadcrumb product={null} listingPath={listingPath} breadcrumbFallbackLabel={breadcrumbFallbackLabel} />
           <div className="mt-10">
             <EmptyState
               eyebrow="Tạm thời gián đoạn"
@@ -69,7 +89,7 @@ export function ProductDetail({ product, related }: ProductDetailProps) {
     <>
       <Section tone="cream" className="pb-0 pt-8 md:pt-10">
         <Container width="wide">
-          <Breadcrumb product={product} />
+          <Breadcrumb product={product} listingPath={listingPath} breadcrumbFallbackLabel={breadcrumbFallbackLabel} />
         </Container>
       </Section>
 
@@ -151,7 +171,7 @@ export function ProductDetail({ product, related }: ProductDetailProps) {
                       variant="primary"
                       className="w-full justify-center"
                     >
-                      Đặt lịch thử váy
+                      {ctaLabel}
                     </Button>
                   ) : (
                     <>
@@ -159,7 +179,7 @@ export function ProductDetail({ product, related }: ProductDetailProps) {
                         Thiết kế này hiện tạm thời không thể đặt lịch thử trực tiếp.
                       </p>
                       <Button
-                        href={`${ROUTES.weddingDresses}?status=available`}
+                        href={`${listingPath}?status=available`}
                         variant="primary"
                         className="w-full justify-center"
                       >
@@ -194,7 +214,7 @@ export function ProductDetail({ product, related }: ProductDetailProps) {
                 <ProductCard
                   key={item.id}
                   product={item}
-                  href={ROUTES.weddingDress(item.slug)}
+                  href={detailPath(item.slug)}
                   sizes="(max-width: 768px) 50vw, 33vw"
                 />
               ))}

@@ -1,10 +1,16 @@
 # Project Status — Xưởng Váy Cưới Bến Tre
 
 > Update this file after every meaningful development batch.
-> Last updated: **2026-07-10** (Phase 5 — wedding dress product detail implemented, uncommitted)
+> Last updated: **2026-07-10** (Phase 6 — suits & áo dài sections implemented, uncommitted)
 
 ## Current Phase
-**Roadmap Phase 5 implemented → awaiting review, then a controlled commit, then Phase 6 (Suit & áo dài sections).**
+**Roadmap Phase 6 implemented → awaiting review, then a controlled commit.**
+
+## Phase 6 (2026-07-10): Suit & áo dài sections
+- `/suits`, `/suits/[slug]`, `/ao-dai`, `/ao-dai/[slug]` — reuse `WeddingDressListing` and `ProductDetail` via new optional config props (`listingPath`, `detailPath`, `pinnedCategory`, copy strings); zero duplication, zero visual change to `/wedding-dresses` (defaults preserve exact prior behavior).
+- Category resolution centralized in `src/lib/constants/categories.ts` (`SUIT_CATEGORY_SLUG = 'vest'`, `AO_DAI_CATEGORY_SLUG = 'ao-dai'`) — resolved against the live categories API, never hardcoded UUIDs. Category absent → elegant EmptyState via the existing empty-catalog path, never `notFound()`.
+- Detail routes verify `product.category_slug` matches the route's pinned category before rendering — a real product from another category (e.g. `abc-vay-vip-1`, category `vay`) correctly 404s under `/suits` and `/ao-dai` rather than silently rendering under the wrong route.
+- Fixed during this phase: pinned category was initially miscounted as a user-applied filter, showing "no results for filters" instead of "collection coming soon" — corrected in `WeddingDressListing`'s `hasActiveFilters` check.
 
 ## Phase 5 (2026-07-10): Wedding dress product detail
 - `/wedding-dresses/[slug]` — resolves the remaining `ProductCard` 404 site-wide (homepage, collections, wedding-dresses listing all link here). `dynamicParams = true`; renders dynamic (reads `params`); `generateMetadata` and the page both call the same `getProduct(slug)` helper — Next's fetch memoization dedupes the underlying request, same non-`cache()` pattern as `/collections/[slug]`

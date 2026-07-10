@@ -38,9 +38,21 @@ interface WeddingDressListingProps {
   data: ApiPaginated<ApiClothingListItem> | null
   filters: WeddingDressFilters
   page: number
+  /** Route configuration — defaults preserve exact /wedding-dresses behavior */
+  listingPath?: string
+  detailPath?: (slug: string) => string
+  /** true for category-pinned routes (/suits, /ao-dai) — hides the category-chip row */
+  pinnedCategory?: boolean
+  breadcrumbLabel?: string
+  pageTitle?: string
+  pageDescription?: string
+  /** Vietnamese noun used in empty-state copy, e.g. "váy cưới" / "vest cưới" / "áo dài cưới" */
+  catalogNoun?: string
+  ctaLabel?: string
 }
 
 function buildHref(
+  listingPath: string,
   filters: WeddingDressFilters,
   overrides: Partial<WeddingDressFilters & { page: number }> = {},
 ): string {
@@ -54,7 +66,7 @@ function buildHref(
     qs.set('page', String(overrides.page))
   }
   const qsStr = qs.toString()
-  return qsStr ? `${ROUTES.weddingDresses}?${qsStr}` : ROUTES.weddingDresses
+  return qsStr ? `${listingPath}?${qsStr}` : listingPath
 }
 
 function FilterChip({
@@ -82,11 +94,26 @@ function FilterChip({
   )
 }
 
-/** Editorial wedding-dress listing — real API data, filters limited to backend capabilities. */
-export function WeddingDressListing({ categories, data, filters, page }: WeddingDressListingProps) {
+/** Editorial clothing listing — real API data, filters limited to backend capabilities. Reused by /wedding-dresses, /suits, /ao-dai. */
+export function WeddingDressListing({
+  categories,
+  data,
+  filters,
+  page,
+  listingPath = ROUTES.weddingDresses,
+  detailPath = ROUTES.weddingDress,
+  pinnedCategory = false,
+  breadcrumbLabel = 'Váy cưới',
+  pageTitle = 'Váy cưới cho thuê',
+  pageDescription = 'Những mẫu váy cưới được tuyển chọn tại xưởng — đặt lịch hẹn để thử trực tiếp và nhận tư vấn riêng cho dáng vóc của bạn.',
+  catalogNoun = 'váy cưới',
+  ctaLabel = 'Đặt lịch thử váy',
+}: WeddingDressListingProps) {
   const items = data?.results ?? []
   const visibleCategories = categories ?? []
-  const hasActiveFilters = Boolean(filters.category || filters.status || filters.search)
+  const hasActiveFilters = Boolean((filters.category && !pinnedCategory) || filters.status || filters.search)
+  const showCategoryChips = !pinnedCategory && visibleCategories.length > 0
+  const showFilterBar = pinnedCategory || visibleCategories.length > 0
 
   return (
     <>
@@ -97,13 +124,13 @@ export function WeddingDressListing({ categories, data, filters, page }: Wedding
               Trang chủ
             </Link>
             <span aria-hidden className="mx-2 text-champagne">·</span>
-            Váy cưới
+            {breadcrumbLabel}
           </p>
           <SectionHeading
             as="h1"
-            eyebrow={data && data.count > 0 ? `${data.count} thiết kế` : 'Váy cưới'}
-            title="Váy cưới cho thuê"
-            description="Những mẫu váy cưới được tuyển chọn tại xưởng — đặt lịch hẹn để thử trực tiếp và nhận tư vấn riêng cho dáng vóc của bạn."
+            eyebrow={data && data.count > 0 ? `${data.count} thiết kế` : breadcrumbLabel}
+            title={pageTitle}
+            description={pageDescription}
           />
         </Container>
       </Section>
@@ -119,24 +146,28 @@ export function WeddingDressListing({ categories, data, filters, page }: Wedding
             />
           ) : (
             <>
-              {visibleCategories.length > 0 && (
+              {showFilterBar && (
                 <div className="mb-10 flex flex-col gap-6 border-b border-line pb-8 md:mb-12">
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                    <FilterChip href={buildHref(filters, { category: undefined })} active={!filters.category}>
-                      Tất cả
-                    </FilterChip>
-                    {visibleCategories.map((category) => (
-                      <FilterChip
-                        key={category.id}
-                        href={buildHref(filters, { category: category.slug })}
-                        active={filters.category === category.slug}
-                      >
-                        {category.name}
-                      </FilterChip>
-                    ))}
-                    <span aria-hidden className="h-3 w-px bg-line" />
+                    {showCategoryChips && (
+                      <>
+                        <FilterChip href={buildHref(listingPath, filters, { category: undefined })} active={!filters.category}>
+                          Tất cả
+                        </FilterChip>
+                        {visibleCategories.map((category) => (
+                          <FilterChip
+                            key={category.id}
+                            href={buildHref(listingPath, filters, { category: category.slug })}
+                            active={filters.category === category.slug}
+                          >
+                            {category.name}
+                          </FilterChip>
+                        ))}
+                        <span aria-hidden className="h-3 w-px bg-line" />
+                      </>
+                    )}
                     <FilterChip
-                      href={buildHref(filters, {
+                      href={buildHref(listingPath, filters, {
                         status: filters.status ? undefined : AVAILABLE_STATUS,
                       })}
                       active={filters.status === AVAILABLE_STATUS}
@@ -150,7 +181,7 @@ export function WeddingDressListing({ categories, data, filters, page }: Wedding
                       {ORDERING_OPTIONS.map((option) => (
                         <FilterChip
                           key={option.value}
-                          href={buildHref(filters, { ordering: option.value })}
+                          href={buildHref(listingPath, filters, { ordering: option.value })}
                           active={filters.ordering === option.value}
                         >
                           {option.label}
@@ -158,7 +189,7 @@ export function WeddingDressListing({ categories, data, filters, page }: Wedding
                       ))}
                     </div>
 
-                    <form method="get" action={ROUTES.weddingDresses} className="flex items-center gap-3">
+                    <form method="get" action={listingPath} className="flex items-center gap-3">
                       {filters.category && <input type="hidden" name="category" value={filters.category} />}
                       {filters.status && <input type="hidden" name="status" value={filters.status} />}
                       {filters.ordering !== DEFAULT_ORDERING && (
@@ -191,19 +222,19 @@ export function WeddingDressListing({ categories, data, filters, page }: Wedding
                   <EmptyState
                     eyebrow="Không có kết quả"
                     title={<>Không tìm thấy thiết kế phù hợp</>}
-                    description="Vui lòng thử tiêu chí khác, hoặc xem toàn bộ váy cưới hiện có tại xưởng."
-                    cta={<Button href={ROUTES.weddingDresses} variant="outline">Xem tất cả váy cưới</Button>}
+                    description={`Vui lòng thử tiêu chí khác, hoặc xem toàn bộ ${catalogNoun} hiện có tại xưởng.`}
+                    cta={<Button href={listingPath} variant="outline">Xem tất cả {catalogNoun}</Button>}
                   />
                 ) : (
                   <EmptyState
                     eyebrow="Sắp ra mắt"
                     title={
                       <>
-                        Bộ sưu tập váy cưới đang được <em className="italic">chuẩn bị</em>
+                        Bộ sưu tập {catalogNoun} đang được <em className="italic">chuẩn bị</em>
                       </>
                     }
                     description="Những thiết kế đầu tiên đang trên đường đến showroom. Đặt lịch hẹn để là người đầu tiên trải nghiệm."
-                    cta={<Button href={ROUTES.appointment} variant="outline">Đặt lịch thử váy</Button>}
+                    cta={<Button href={ROUTES.appointment} variant="outline">{ctaLabel}</Button>}
                   />
                 )
               ) : (
@@ -213,7 +244,7 @@ export function WeddingDressListing({ categories, data, filters, page }: Wedding
                       <ProductCard
                         key={product.id}
                         product={product}
-                        href={ROUTES.weddingDress(product.slug)}
+                        href={detailPath(product.slug)}
                         priority={page === 1 && index < 4}
                         sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
                       />
@@ -223,7 +254,7 @@ export function WeddingDressListing({ categories, data, filters, page }: Wedding
                     page={page}
                     hasPrevious={data.previous !== null}
                     hasNext={data.next !== null}
-                    buildHref={(n) => buildHref(filters, { page: n })}
+                    buildHref={(n) => buildHref(listingPath, filters, { page: n })}
                   />
                 </>
               )}

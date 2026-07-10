@@ -87,8 +87,8 @@ Luxury Editorial Bridal Fashion. Tokens: ivory `#FBF9F4`, warm-white `#FFFDF9`, 
 
 ## 7. Routes
 
-**Implemented:** `/` (production homepage, 10 editorial sections, ISR 5m) · `/collections` (index over real categories, ISR 5m) · `/collections/[slug]` (dynamic: hero + grid + prev/next pagination; unknown slug → 404 only when API confirms; API failure → degraded editorial state) · `/wedding-dresses` (dynamic: full clothing catalog — no category slug pinned, see §18 Decision Log 2026-07-10; category/status/ordering/search filters, all link/form-driven with zero client JS; DRF prev/next pagination via shared `src/components/shared/Pagination.tsx`) · `/wedding-dresses/[slug]` (dynamic product detail — resolves the `ProductCard` 404 site-wide; gallery + info panel + related designs; see §18 for gallery/CTA/related-products decisions) · branded `not-found.tsx`. Global shell wraps all routes; Header renders its `transparent` variant on `/` automatically. Category slugs resolve through the cached categories list — the backend has no slug-retrieve for categories.
-**Planned** (purpose/SEO/conversion/API table in docs/ARCHITECTURE.md §5): `/suits`, `/suits/[slug]`, `/ao-dai`, `/ao-dai/[slug]`, `/rental`, `/appointment`, `/about`, `/contact`.
+**Implemented:** `/` (production homepage, 10 editorial sections, ISR 5m) · `/collections` (index over real categories, ISR 5m) · `/collections/[slug]` (dynamic: hero + grid + prev/next pagination; unknown slug → 404 only when API confirms; API failure → degraded editorial state) · `/wedding-dresses` + `/suits` + `/ao-dai` (dynamic listings sharing one `WeddingDressListing` component via config props — `/wedding-dresses` shows the full catalog unpinned; `/suits` and `/ao-dai` pin to `SUIT_CATEGORY_SLUG`/`AO_DAI_CATEGORY_SLUG` in `src/lib/constants/categories.ts`, resolved against the live categories API; category absent → EmptyState, never `notFound()`) · `/wedding-dresses/[slug]` + `/suits/[slug]` + `/ao-dai/[slug]` (dynamic product detail sharing one `ProductDetail` component via config props; detail routes verify `product.category_slug` matches the route's pinned category before rendering — a product from another category 404s rather than leaking through) · branded `not-found.tsx`. Global shell wraps all routes; Header renders its `transparent` variant on `/` automatically. Category slugs resolve through the cached categories list — the backend has no slug-retrieve for categories.
+**Planned** (purpose/SEO/conversion/API table in docs/ARCHITECTURE.md §5): `/rental`, `/appointment`, `/about`, `/contact`.
 `dynamicParams = true` on all detail routes (CMS-created slugs).
 
 ## 8. Data Domain (from FOXIE audit, 2026-07-09)
@@ -144,8 +144,8 @@ Separate Vercel project auto-deploying from this repo's `main` (once created) ·
 | Homepage | ✅ DONE | Phase 2 (2026-07-09) |
 | Collection discovery | ✅ DONE | Phase 3 (2026-07-09); committed (`22a421b`), pushed |
 | Wedding dress listing | ✅ DONE | Phase 4 (2026-07-10); committed (`b66be0a`), pushed |
-| Wedding dress product detail | ✅ DONE | Phase 5 (2026-07-10); uncommitted, awaiting review |
-| Catalog routes (remaining) | ⏳ PLANNED | Phase 6 (`/suits`, `/ao-dai`) — content-gated |
+| Wedding dress product detail | ✅ DONE | Phase 5 (2026-07-10); committed (`29bac2b`), pushed |
+| Suit & áo dài sections | ✅ DONE | Phase 6 (2026-07-10); uncommitted, awaiting review — content-gated (categories don't exist in production yet) |
 | Conversion forms | ⏳ PLANNED | Phase 7 — verify submit serializers first |
 | SEO / perf | ⏳ PLANNED | Phases 8–9 |
 | Deployment | ⛔ NOT STARTED | Phases 10–11 |
