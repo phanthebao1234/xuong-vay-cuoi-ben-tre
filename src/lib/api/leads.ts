@@ -8,13 +8,18 @@ export type SubmitLeadResult =
 /**
  * Posts through this app's own /api/appointment route (same-origin) rather
  * than FOXIE directly — see that route's comment for why (CORS).
+ *
+ * `honeypot` is the raw value of the hidden anti-spam field — sent alongside
+ * the payload so the route handler can decide whether to relay to FOXIE. It
+ * is never part of `LeadSubmitPayload` (that type stays accurate to FOXIE's
+ * real contract) and the route strips it before forwarding anything.
  */
-export async function submitLead(payload: LeadSubmitPayload): Promise<SubmitLeadResult> {
+export async function submitLead(payload: LeadSubmitPayload, honeypot: string): Promise<SubmitLeadResult> {
   try {
     const res = await fetch('/api/appointment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, company: honeypot }),
     })
     if (res.status === 201) {
       return { ok: true, data: (await res.json()) as LeadSubmitResponse }

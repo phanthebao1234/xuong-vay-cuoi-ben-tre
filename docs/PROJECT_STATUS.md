@@ -1,7 +1,13 @@
 # Project Status — Xưởng Váy Cưới Bến Tre
 
 > Update this file after every meaningful development batch.
-> Last updated: **2026-07-10** (SEO foundation batch — favicon/robots/sitemap/OG — implemented, uncommitted)
+> Last updated: **2026-07-10** (Appointment honeypot spam guard implemented, uncommitted)
+
+## Appointment Honeypot (2026-07-10)
+- Hidden `company` field in `AppointmentForm` — off-screen positioning (not `display:none`/`visibility:hidden`, which some bots specifically check for and skip), `aria-hidden` + `tabIndex={-1}`, `autoComplete="off"`. Value travels to `/api/appointment` alongside the real payload (never added to the typed `LeadSubmitPayload`).
+- `src/app/api/appointment/route.ts` is the sole enforcement point: a non-empty honeypot short-circuits with the same 201/success shape a real submission gets — FOXIE is never called, detection is never revealed. The route also now whitelists the exact 6 `LeadPublicSerializer` fields before forwarding, dropping anything else (including the honeypot key itself).
+- Known tradeoff (inherent to honeypot fields generally, not fixed): aggressive browser autofill could theoretically populate a hidden field and false-positive a real user — mitigated via `autoComplete="off"` and an unusual field name, not eliminable entirely.
+- Verified: honeypot unreachable via tab/screen-reader, normal submissions unaffected, filled honeypot returns safe generic success without hitting FOXIE, double-submit guard and existing validation-error UI both intact, zero console errors/overflow at 375px.
 
 ## Current Phase
 **Phase 7 committed (`e397909`), pushed. SEO foundation batch implemented → awaiting review, then a controlled commit.**

@@ -25,19 +25,23 @@ export function AppointmentForm({ defaultServiceInterest }: AppointmentFormProps
     const form = e.currentTarget
     const data = new FormData(form)
     const trim = (key: string) => String(data.get(key) ?? '').trim()
+    const honeypot = String(data.get('company') ?? '')
 
     setStatus('submitting')
     setFieldErrors(null)
     setGeneralError(null)
 
-    const result = await submitLead({
-      name: trim('name'),
-      phone: trim('phone') || undefined,
-      email: trim('email') || undefined,
-      service_interest: trim('service_interest') || undefined,
-      message: trim('message') || undefined,
-      source: 'website',
-    })
+    const result = await submitLead(
+      {
+        name: trim('name'),
+        phone: trim('phone') || undefined,
+        email: trim('email') || undefined,
+        service_interest: trim('service_interest') || undefined,
+        message: trim('message') || undefined,
+        source: 'website',
+      },
+      honeypot,
+    )
 
     if (result.ok) {
       setStatus('success')
@@ -72,6 +76,18 @@ export function AppointmentForm({ defaultServiceInterest }: AppointmentFormProps
           {generalError}
         </p>
       )}
+
+      {/*
+        Honeypot: off-screen (not display:none/visibility:hidden, which some
+        bots specifically check for and skip), aria-hidden + tabIndex={-1} so
+        it's invisible to sighted users and never reachable via screen reader
+        or keyboard. Legitimate users can never fill it; a filled value is a
+        strong bot signal, checked server-side in /api/appointment.
+      */}
+      <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: 1, height: 1, overflow: 'hidden' }}>
+        <label htmlFor="appointment-company">Company</label>
+        <input id="appointment-company" name="company" type="text" tabIndex={-1} autoComplete="off" />
+      </div>
 
       <Field label="Họ và tên" name="name" required autoComplete="name" error={fieldErrors?.name} />
       <Field label="Số điện thoại" name="phone" type="tel" required autoComplete="tel" error={fieldErrors?.phone} />
