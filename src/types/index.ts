@@ -82,11 +82,25 @@ export interface ApiAccessoryListItem {
   updated_at: string
 }
 
-/** POST /leads/submit/ — public conversion payload (verify serializer before extending) */
+/**
+ * POST /leads/submit/ — LeadPublicSerializer, verified against FOXIE source
+ * (backend/apps/leads/{models,serializers,views}.py) on 2026-07-10.
+ * Only `name` is required — `phone`/`email`/`message`/`service_interest` are
+ * `blank=True` on the model; `source` has a model default ('website').
+ */
 export interface LeadSubmitPayload {
-  full_name: string
-  phone: string
+  name: string
+  phone?: string
   email?: string
   message?: string
-  source?: string
+  service_interest?: string
+  source?: 'website' | 'facebook' | 'zalo' | 'referral' | 'phone'
 }
+
+/** 201 response body from /leads/submit/ */
+export interface LeadSubmitResponse {
+  detail: string
+}
+
+/** DRF's standard validation-error shape on 400 — field name → list of messages */
+export type ApiValidationError = Record<string, string[]>

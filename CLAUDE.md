@@ -80,6 +80,7 @@ Next.js **16.2.9** (App Router) · React **19.2.4** · TypeScript 5 strict · Ta
 - Never invent API fields — verify against FOXIE serializer source and date the verification in `src/types/index.ts`.
 - Public pages: `await fetchX().catch(() => fallback)` — never a blank page on API failure.
 - Never render internal lifecycle fields the API leaks (`purchase_price`, `sold_price`, `rental_count`, `retirement_reason`, `quantity`, `purchase_date`).
+- **Client-side POSTs never call FOXIE directly** — this origin isn't in FOXIE's `CORS_ALLOWED_ORIGINS` (confirmed empirically, see docs/API_INTEGRATION.md). Route through a same-origin `src/app/api/*/route.ts` handler that relays server-side (not a CORS "workaround" — standard same-origin proxy pattern, no browser CORS involved). First instance: `src/app/api/appointment/route.ts` → `POST /leads/submit/`.
 
 ## 6. Design System (summary — full rules in docs/DESIGN_SYSTEM.md)
 
@@ -87,8 +88,8 @@ Luxury Editorial Bridal Fashion. Tokens: ivory `#FBF9F4`, warm-white `#FFFDF9`, 
 
 ## 7. Routes
 
-**Implemented:** `/` (production homepage, 10 editorial sections, ISR 5m) · `/collections` (index over real categories, ISR 5m) · `/collections/[slug]` (dynamic: hero + grid + prev/next pagination; unknown slug → 404 only when API confirms; API failure → degraded editorial state) · `/wedding-dresses` + `/suits` + `/ao-dai` (dynamic listings sharing one `WeddingDressListing` component via config props — `/wedding-dresses` shows the full catalog unpinned; `/suits` and `/ao-dai` pin to `SUIT_CATEGORY_SLUG`/`AO_DAI_CATEGORY_SLUG` in `src/lib/constants/categories.ts`, resolved against the live categories API; category absent → EmptyState, never `notFound()`) · `/wedding-dresses/[slug]` + `/suits/[slug]` + `/ao-dai/[slug]` (dynamic product detail sharing one `ProductDetail` component via config props; detail routes verify `product.category_slug` matches the route's pinned category before rendering — a product from another category 404s rather than leaking through) · branded `not-found.tsx`. Global shell wraps all routes; Header renders its `transparent` variant on `/` automatically. Category slugs resolve through the cached categories list — the backend has no slug-retrieve for categories.
-**Planned** (purpose/SEO/conversion/API table in docs/ARCHITECTURE.md §5): `/rental`, `/appointment`, `/about`, `/contact`.
+**Implemented:** `/` (production homepage, 10 editorial sections, ISR 5m) · `/collections` (index over real categories, ISR 5m) · `/collections/[slug]` (dynamic: hero + grid + prev/next pagination; unknown slug → 404 only when API confirms; API failure → degraded editorial state) · `/wedding-dresses` + `/suits` + `/ao-dai` (dynamic listings sharing one `WeddingDressListing` component via config props — `/wedding-dresses` shows the full catalog unpinned; `/suits` and `/ao-dai` pin to `SUIT_CATEGORY_SLUG`/`AO_DAI_CATEGORY_SLUG` in `src/lib/constants/categories.ts`, resolved against the live categories API; category absent → EmptyState, never `notFound()`) · `/wedding-dresses/[slug]` + `/suits/[slug]` + `/ao-dai/[slug]` (dynamic product detail sharing one `ProductDetail` component via config props; detail routes verify `product.category_slug` matches the route's pinned category before rendering — a product from another category 404s rather than leaking through) · `/appointment` (conversion form — Server Component page + one client form `AppointmentForm`; posts via `src/app/api/appointment/route.ts` same-origin proxy to `POST /leads/submit/`; optional `?product={slug}` context is display-only, never authoritative) · branded `not-found.tsx`. Global shell wraps all routes; Header renders its `transparent` variant on `/` automatically. Category slugs resolve through the cached categories list — the backend has no slug-retrieve for categories.
+**Planned** (purpose/SEO/conversion/API table in docs/ARCHITECTURE.md §5): `/rental`, `/about`, `/contact`.
 `dynamicParams = true` on all detail routes (CMS-created slugs).
 
 ## 8. Data Domain (from FOXIE audit, 2026-07-09)
@@ -145,8 +146,8 @@ Separate Vercel project auto-deploying from this repo's `main` (once created) ·
 | Collection discovery | ✅ DONE | Phase 3 (2026-07-09); committed (`22a421b`), pushed |
 | Wedding dress listing | ✅ DONE | Phase 4 (2026-07-10); committed (`b66be0a`), pushed |
 | Wedding dress product detail | ✅ DONE | Phase 5 (2026-07-10); committed (`29bac2b`), pushed |
-| Suit & áo dài sections | ✅ DONE | Phase 6 (2026-07-10); uncommitted, awaiting review — content-gated (categories don't exist in production yet) |
-| Conversion forms | ⏳ PLANNED | Phase 7 — verify submit serializers first |
+| Suit & áo dài sections | ✅ DONE | Phase 6 (2026-07-10); committed (`3b81d6f`), pushed — content-gated (categories don't exist in production yet) |
+| Appointment conversion flow | ✅ DONE | Phase 7 (2026-07-10); uncommitted, awaiting review — `/leads/submit/` selected over bookings, see §18 |
 | SEO / perf | ⏳ PLANNED | Phases 8–9 |
 | Deployment | ⛔ NOT STARTED | Phases 10–11 |
 | Catalog content | ⛔ MISSING | RentalCategory rows + products needed in FOXIE Admin |
@@ -188,6 +189,9 @@ See docs/API_INTEGRATION.md §2 for the full matrix. Headlines: no server-side c
 | 2026-07-10 | Related designs = same-category clothing list, current product excluded client-side by id, capped at 3, section omitted at 0 | No "related products" or "exclude id" backend capability exists; honest derivation from real data only, never fake relationships |
 | 2026-07-10 | CTA links pass `?product={slug}` to `/appointment` and `/contact` even though neither route exists yet | Forward-compatible, zero-risk (unused query param until Phase 7 builds the form to read it); explicit instruction to preserve product context without implementing booking mutation this phase |
 | 2026-07-10 | Non-`available` status replaces the primary booking CTA with a status message + a link to `/wedding-dresses?status=available` | Satisfies the pre-existing documented rule (API_INTEGRATION.md §5): disable inquiry CTA, suggest alternatives, for unavailable products |
+| 2026-07-10 | `/appointment` posts to `POST /leads/submit/`, not `/bookings/submit/` | Verified from FOXIE source: leads only requires `name`; bookings forces `phone` + `booking_date` + a photography-studio `service_type` enum with no good fit for a dress-fitting inquiry |
+| 2026-07-10 | Client-side form POST routes through a new same-origin `src/app/api/appointment/route.ts` proxy instead of calling FOXIE directly | Empirically confirmed this origin isn't in FOXIE's `CORS_ALLOWED_ORIGINS` — a direct browser POST fails CORS. A server-side proxy sidesteps it correctly (no browser CORS involved) without needing the FOXIE-side env var change; first instance of this pattern, reusable for future public-POST features |
+| 2026-07-10 | Fixed `LeadSubmitPayload` in `src/types/index.ts` — was `full_name` (invented), now `name` (real field); `phone` was wrongly marked required | Pre-existing speculative type predated serializer verification; corrected while auditing the contract for Phase 7 |
 
 ## 19. Current Working Tree Snapshot
 

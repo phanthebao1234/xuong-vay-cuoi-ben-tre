@@ -36,13 +36,13 @@ Configured via `NEXT_PUBLIC_API_URL` (origin only, `/api/v1` appended in `src/li
 | Filtering | ✅ `status`, `is_featured`, `category` (slug) | DjangoFilterBackend + custom | — | ✅ | no color/size/price-range | v1 ships with supported filters only |
 | Search | ✅ `?search=` on name/code/description | SearchFilter | — | ✅ | Vietnamese diacritics — DB collation dependent | expose simple search box, verify behavior against prod |
 | Pagination | ✅ global DRF pagination | `{ count, next, previous, results }` | — | ✅ | page size fixed by backend | build numbered pagination from `count` |
-| Rental inquiry | ✅ leads | `POST /leads/submit/` (AllowAny) | leads serializer | ⚠️ payload to verify | no throttling (known FOXIE issue) | verify exact serializer fields before wiring form |
-| Appointment booking | ✅ bookings | `POST /bookings/submit/` (AllowAny) | bookings serializer | ⚠️ payload to verify | no throttling | same |
+| Rental inquiry | ✅ leads | `POST /leads/submit/` (AllowAny) | `LeadPublicSerializer` | ✅ wired 2026-07-10 (`/appointment`) | no throttling (known FOXIE issue); **this origin isn't yet in `CORS_ALLOWED_ORIGINS`, verified empirically — direct browser POST fails CORS**, worked around via same-origin `src/app/api/appointment/route.ts` server-side proxy | selected over bookings — only `name` required, no forced `booking_date`/photography-only `service_type` enum |
+| Appointment booking | ✅ bookings | `POST /bookings/submit/` (AllowAny) | `BookingPublicSerializer` | ⚠️ not used | requires `phone`, `booking_date`, and a photography-studio `service_type` enum (wedding/pre_wedding/family/…/rental) — poor fit for a dress-fitting inquiry; `rental` is the only relevant choice | not selected for `/appointment`; revisit only if true date/time scheduling is needed |
 | Accessories | ✅ public list/detail | `GET /rentals/accessories/` | `AccessoryListSerializer` | ✅ typed | — | optional "phụ kiện" section later |
 
 **Verdict: the site can launch on the existing API with zero backend changes**, provided:
 1. `RentalCategory` rows for váy cưới / vest / áo dài exist in production (content task, FOXIE Admin).
-2. The new domain is added to `CORS_ALLOWED_ORIGINS` on Railway at deploy time (env var, approval required).
+2. The new domain (and this dev origin, for local testing against prod) is added to `CORS_ALLOWED_ORIGINS` on Railway (env var, approval required) — **confirmed missing today** (empirical probe 2026-07-10: `OPTIONS`/`POST` to `/leads/submit/` from `Origin: http://localhost:3100` returns no `Access-Control-Allow-Origin` header). Until then, all client-side POSTs must route through this app's own `/api/*` proxy routes, never call FOXIE directly from the browser.
 
 ### ⚠️ Public data-exposure note (FOXIE backend gap, do not fix from this project)
 `ClothingListSerializer` and `ClothingDetailSerializer` expose internal lifecycle fields to
@@ -54,8 +54,9 @@ serializer eventually — requires cross-project approval.
 
 - `src/lib/api/client.ts` — single `apiFetch<T>()` with **ISR revalidation (default 300 s)** instead of FOXIE's `no-store` (this site is a content catalog, not an admin dashboard). `ApiError` carries HTTP status.
 - `src/lib/api/rentals.ts` — typed per-domain services; pages call services, never `fetch` directly.
+- `src/lib/api/leads.ts` — client-callable `submitLead()`, posts to this app's own `/api/appointment` route (same-origin), never directly to FOXIE from the browser (see CORS note above). The route handler (`src/app/api/appointment/route.ts`) is a thin server-side relay — forwards the exact payload to `POST /leads/submit/` and relays FOXIE's exact status/body back, no rewriting.
 - **No JWT code exists in this repo by design.** Any task that seems to need auth belongs in the FOXIE Admin instead.
-- Server-side fetching by default; client-side fetching only for interactive filtering if ever needed.
+- Server-side fetching by default; client-side fetching only for interactive filtering or form submission (`AppointmentForm`, the only client component in the conversion flow).
 
 ## 4. Media Handling
 

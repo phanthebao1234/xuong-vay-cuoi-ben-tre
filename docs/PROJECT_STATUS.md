@@ -1,10 +1,18 @@
 # Project Status — Xưởng Váy Cưới Bến Tre
 
 > Update this file after every meaningful development batch.
-> Last updated: **2026-07-10** (Phase 6 — suits & áo dài sections implemented, uncommitted)
+> Last updated: **2026-07-10** (Phase 7 — appointment conversion flow implemented, uncommitted)
 
 ## Current Phase
-**Roadmap Phase 6 implemented → awaiting review, then a controlled commit.**
+**Roadmap Phase 7 implemented → awaiting review, then a controlled commit.**
+
+## Phase 7 (2026-07-10): Appointment / booking conversion flow
+- `/appointment` — editorial Server Component (`src/features/appointment/AppointmentPage.tsx`) + one client form (`AppointmentForm.tsx`, the only client component in the flow). Breadcrumb, benefits, form, privacy copy — no invented phone/hours/testimonials/stats.
+- **Endpoint selected: `POST /leads/submit/`** (`LeadPublicSerializer`), not bookings — verified from FOXIE source: only `name` is required (`phone`/`email`/`message`/`service_interest` are `blank=True`, `source` defaults to `website`). Bookings would force `phone` + `booking_date` + a photography-studio `service_type` enum with no real fit for a dress-fitting inquiry.
+- **CORS finding:** this origin is not yet in FOXIE's `CORS_ALLOWED_ORIGINS` — confirmed empirically (`OPTIONS`/`POST` from `Origin: http://localhost:3100` returns no `Access-Control-Allow-Origin`). A direct browser → FOXIE POST would fail. Worked around correctly (not a hack) via a same-origin Next.js Route Handler proxy: `src/app/api/appointment/route.ts` forwards server-side (no browser CORS involved) and relays FOXIE's exact status/body.
+- Full state machine: idle → submitting (double-submit guarded, verified under a forced race — exactly 1 network call) → success (deliberate, no auto-redirect) → DRF validation error (field-level, backend's own Vietnamese messages relayed verbatim) → network failure → server failure. Input preserved after failure (uncontrolled form, never reset except on success). No localStorage/sessionStorage, no PII logged.
+- `ProductDetail`'s existing `?product={slug}` CTA context already worked without changes — `/appointment` does a best-effort, non-authoritative `fetchClothingDetail(slug).catch(() => null)` to show "Bạn đang quan tâm đến {name}" and pre-fill (editable) `service_interest`.
+- Fixed a pre-existing type bug while verifying the contract: `LeadSubmitPayload` had an invented field name (`full_name` instead of the real `name`) and wrongly marked `phone` as required — corrected in `src/types/index.ts`.
 
 ## Phase 6 (2026-07-10): Suit & áo dài sections
 - `/suits`, `/suits/[slug]`, `/ao-dai`, `/ao-dai/[slug]` — reuse `WeddingDressListing` and `ProductDetail` via new optional config props (`listingPath`, `detailPath`, `pinnedCategory`, copy strings); zero duplication, zero visual change to `/wedding-dresses` (defaults preserve exact prior behavior).
@@ -85,23 +93,25 @@
 - Nothing blocking development. Launch-time dependency: CORS env-var addition on Railway (Phase 10, approval required).
 
 ## Planned (next)
-1. Review Phase 5 (`/wedding-dresses/[slug]`), then a controlled commit (approval required)
-2. Phase 6: reuse the Phase 4/5 listing + detail components for `/suits` and `/ao-dai` once those categories exist in production
-3. Content prerequisite (via FOXIE Admin): categories for vest / áo dài, `is_featured` flags, cover images, and product photography — needed before Phase 6 is meaningful and before the Phase 5 gallery/related-designs sections are exercised by real traffic
+1. Review Phase 7 (`/appointment`), then a controlled commit (approval required)
+2. CORS: add this site's domain (and, for continued local testing against prod, the dev origin) to FOXIE's `CORS_ALLOWED_ORIGINS` on Railway — approval-gated env var change, needed before any client-side POST can reach FOXIE directly (currently mitigated via the `/api/appointment` proxy, which needs no CORS change)
+3. Content prerequisite (via FOXIE Admin): categories for vest / áo dài, `is_featured` flags, cover images, and product photography
 
 ## Production Status
-Not deployed. Git repository initialized 2026-07-09 (`main`); GitHub remote `origin` connected. Pushed commits: `7145860` (baseline), `22a421b` (Phase 3), `b66be0a` (Phase 4). Phase 5 work is implemented but **uncommitted**. No Vercel project yet.
+Not deployed. Git repository initialized 2026-07-09 (`main`); GitHub remote `origin` connected. Pushed commits through Phase 6 (`3b81d6f`). Phase 7 work is implemented but **uncommitted**. No Vercel project yet.
 
 ## API Dependencies
 - `GET /rentals/categories/`, `GET /rentals/clothing/` (+filters), `GET /rentals/clothing/{slug}/` — public, verified
-- `POST /leads/submit/`, `POST /bookings/submit/` — public; **payload serializers not yet read — verify before Phase 7**
+- `POST /leads/submit/` — public, verified and wired (Phase 7, via `/api/appointment` proxy)
+- `POST /bookings/submit/` — public, verified but not used (see Phase 7 rationale above)
 
 ## Known Issues
-- Backend gaps inherited from FOXIE (not fixable here): public serializer exposes internal lifecycle fields — confirmed as of 2026-07-10 to include `purchase_date`, `purchase_price`, `last_rental_date`, `rental_count`, `sold_date`, `sold_price`, `retirement_reason`, `quantity`, **and (newly confirmed) `archived_at`, `created_by`** (the detail serializer uses `fields = '__all__'`); no color/size/price-range server filters; no availability calendar; no submit throttling. Details: API_INTEGRATION.md §2.
+- Backend gaps inherited from FOXIE (not fixable here): public serializer exposes internal lifecycle fields — confirmed as of 2026-07-10 to include `purchase_date`, `purchase_price`, `last_rental_date`, `rental_count`, `sold_date`, `sold_price`, `retirement_reason`, `quantity`, **and (newly confirmed) `archived_at`, `created_by`** (the detail serializer uses `fields = '__all__'`); no color/size/price-range server filters; no availability calendar; **no submit throttling on `/leads/submit/` or `/bookings/submit/`** (confirmed — no `DEFAULT_THROTTLE_CLASSES` anywhere in FOXIE settings; a public form is exposed to unlimited automated submission, backend-owned fix). Details: API_INTEGRATION.md §2.
+- `CORS_ALLOWED_ORIGINS` on Railway does not yet include this site's origin — confirmed empirically 2026-07-10 (see Phase 7 above). All client-side POSTs must go through this app's own `/api/*` proxy routes until that env var is updated (approval-gated, FOXIE-owned).
 - Category taxonomy depends on production content that doesn't exist yet — only one `RentalCategory` (`vay`) exists in production, so `/wedding-dresses` shows the full catalog rather than a pinned category (see Phase 4 note above).
 - The Phase 5 gallery (multi-image grid + lightbox) and related-designs section are only verified against synthetic/mocked data this session — real production data is a single product with 0 images and no category siblings, so neither has been exercised by real traffic yet.
-- Header/footer nav links to `/suits`, `/ao-dai`, `/rental`, `/appointment`, `/about`, `/contact` still 404 until their phases ship — intentional during development. The `/wedding-dresses/[slug]` CTAs now link to `?product={slug}`-suffixed `/appointment` and `/contact` URLs in anticipation of Phase 7's form reading that context.
+- Header/footer nav links to `/rental`, `/about`, `/contact` still 404 until their phases ship — intentional during development. `?product={slug}` context on `/appointment` links now does something (Phase 7); `/contact` still doesn't exist.
 - Header `transparent` variant is implemented but unused until the Phase 2 hero; per-route variant wiring (route group or prop) decided in Phase 2.
 
 ## Next Recommended Action
-Review `/wedding-dresses/[slug]` (product detail, gallery, CTAs), approve a controlled commit, push, then start Phase 6 (Suit & áo dài sections) — content-gated on FOXIE Admin categories.
+Review `/appointment` (form, proxy route, CORS finding), approve a controlled commit, push. Separately, raise the CORS env-var change and submit-throttling gaps with FOXIE for approval — both are backend-owned, outside this project's authority to fix.
