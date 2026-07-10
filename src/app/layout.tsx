@@ -33,6 +33,9 @@ export const metadata: Metadata = {
     locale: 'vi_VN',
     siteName: SITE.name,
   },
+  twitter: {
+    card: 'summary_large_image',
+  },
 }
 
 export default function RootLayout({

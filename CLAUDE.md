@@ -89,6 +89,8 @@ Luxury Editorial Bridal Fashion. Tokens: ivory `#FBF9F4`, warm-white `#FFFDF9`, 
 ## 7. Routes
 
 **Implemented:** `/` (production homepage, 10 editorial sections, ISR 5m) · `/collections` (index over real categories, ISR 5m) · `/collections/[slug]` (dynamic: hero + grid + prev/next pagination; unknown slug → 404 only when API confirms; API failure → degraded editorial state) · `/wedding-dresses` + `/suits` + `/ao-dai` (dynamic listings sharing one `WeddingDressListing` component via config props — `/wedding-dresses` shows the full catalog unpinned; `/suits` and `/ao-dai` pin to `SUIT_CATEGORY_SLUG`/`AO_DAI_CATEGORY_SLUG` in `src/lib/constants/categories.ts`, resolved against the live categories API; category absent → EmptyState, never `notFound()`) · `/wedding-dresses/[slug]` + `/suits/[slug]` + `/ao-dai/[slug]` (dynamic product detail sharing one `ProductDetail` component via config props; detail routes verify `product.category_slug` matches the route's pinned category before rendering — a product from another category 404s rather than leaking through) · `/appointment` (conversion form — Server Component page + one client form `AppointmentForm`; posts via `src/app/api/appointment/route.ts` same-origin proxy to `POST /leads/submit/`; optional `?product={slug}` context is display-only, never authoritative) · branded `not-found.tsx`. Global shell wraps all routes; Header renders its `transparent` variant on `/` automatically. Category slugs resolve through the cached categories list — the backend has no slug-retrieve for categories.
+
+**SEO/metadata files (2026-07-10):** `src/app/icon.tsx` / `apple-icon.tsx` (generated monogram favicon, no external asset) · `src/app/opengraph-image.tsx` (1200×630 generated, no remote fetch; auto-reused for Twitter via root `twitter: { card: 'summary_large_image' }`) · `src/app/robots.ts` · `src/app/sitemap.ts` (static + dynamic entries from real categories/clothing, slugs only). All routes inherit the branded OG image via root metadata **except** `/wedding-dresses/[slug]`, `/suits/[slug]`, `/ao-dai/[slug]` when the product has 0 images (their own partial `openGraph` object suppresses inheritance) — known gap, not fixed, see docs/PROJECT_STATUS.md. Verify OG/SEO behavior against `next build && next start`, not `next dev` — dev mode has a route-manifest staleness quirk after adding a root-level file-convention route.
 **Planned** (purpose/SEO/conversion/API table in docs/ARCHITECTURE.md §5): `/rental`, `/about`, `/contact`.
 `dynamicParams = true` on all detail routes (CMS-created slugs).
 
@@ -147,8 +149,9 @@ Separate Vercel project auto-deploying from this repo's `main` (once created) ·
 | Wedding dress listing | ✅ DONE | Phase 4 (2026-07-10); committed (`b66be0a`), pushed |
 | Wedding dress product detail | ✅ DONE | Phase 5 (2026-07-10); committed (`29bac2b`), pushed |
 | Suit & áo dài sections | ✅ DONE | Phase 6 (2026-07-10); committed (`3b81d6f`), pushed — content-gated (categories don't exist in production yet) |
-| Appointment conversion flow | ✅ DONE | Phase 7 (2026-07-10); uncommitted, awaiting review — `/leads/submit/` selected over bookings, see §18 |
-| SEO / perf | ⏳ PLANNED | Phases 8–9 |
+| Appointment conversion flow | ✅ DONE | Phase 7 (2026-07-10); committed (`e397909`), pushed — `/leads/submit/` selected over bookings, see §18 |
+| SEO foundation (favicon/robots/sitemap/OG) | ✅ DONE | 2026-07-10; uncommitted, awaiting review — 0-image product pages don't inherit OG fallback, known gap |
+| Perf / structured data / honeypot | ⏳ PLANNED | Not yet scheduled |
 | Deployment | ⛔ NOT STARTED | Phases 10–11 |
 | Catalog content | ⛔ MISSING | RentalCategory rows + products needed in FOXIE Admin |
 

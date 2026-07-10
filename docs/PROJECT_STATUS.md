@@ -1,10 +1,19 @@
 # Project Status — Xưởng Váy Cưới Bến Tre
 
 > Update this file after every meaningful development batch.
-> Last updated: **2026-07-10** (Phase 7 — appointment conversion flow implemented, uncommitted)
+> Last updated: **2026-07-10** (SEO foundation batch — favicon/robots/sitemap/OG — implemented, uncommitted)
 
 ## Current Phase
-**Roadmap Phase 7 implemented → awaiting review, then a controlled commit.**
+**Phase 7 committed (`e397909`), pushed. SEO foundation batch implemented → awaiting review, then a controlled commit.**
+
+## SEO Foundation (2026-07-10)
+- `src/app/icon.tsx` / `apple-icon.tsx` — generated (Next `ImageResponse`, no external asset) charcoal/champagne "X" monogram, 32×32 and 180×180.
+- `src/app/robots.ts` — allows `/`, disallows `/api/`, references `${SITE.url}/sitemap.xml`.
+- `src/app/sitemap.ts` — 6 static routes + dynamic entries from real `/rentals/categories/` and `/rentals/clothing/` data (slugs only, no internal IDs); each product maps to exactly one canonical URL based on its real `category_slug` (`/suits/`, `/ao-dai/`, or `/wedding-dresses/`) — never duplicated. Both API calls independently `.catch()`-guarded; a FOXIE outage degrades to the 6 static entries only, never breaks the route. **Known limitation:** fetches a single clothing page (current catalog is 1 item, well under `PAGE_SIZE=20`) — will need pagination traversal once the catalog exceeds one page.
+- `src/app/opengraph-image.tsx` — 1200×630 generated (no remote fetch), reused automatically by Twitter via `twitter: { card: 'summary_large_image' }` in root `layout.tsx` (no separate twitter-image file needed).
+- Verified against the real **production build** (dev server has a route-manifest staleness quirk after adding a root-level file-convention route — not present in `next build`/`next start`): `/`, `/collections`, `/wedding-dresses`, `/suits`, `/ao-dai`, `/appointment`, `/collections/[slug]` all correctly inherit the branded OG image.
+- **Known gap, not fixed this batch:** `/wedding-dresses/[slug]`, `/suits/[slug]`, `/ao-dai/[slug]` set their own partial `openGraph` object (for the real-product-image case) with no `images` key when the product has 0 photos — this suppresses root inheritance, so a 0-image product currently ships with no OG image at all. Today's only real product has 0 images, so this is live. Left untouched per instruction to preserve existing detail-page behavior; a follow-up would add an explicit fallback in those 3 files' `generateMetadata`.
+- **Required production env var (not yet set — do not guess a domain):** `NEXT_PUBLIC_SITE_URL` must be set to the real production domain in Vercel; `metadataBase` and every generated URL (sitemap, robots, OG) derive from it. Currently `http://localhost:3100`.
 
 ## Phase 7 (2026-07-10): Appointment / booking conversion flow
 - `/appointment` — editorial Server Component (`src/features/appointment/AppointmentPage.tsx`) + one client form (`AppointmentForm.tsx`, the only client component in the flow). Breadcrumb, benefits, form, privacy copy — no invented phone/hours/testimonials/stats.
