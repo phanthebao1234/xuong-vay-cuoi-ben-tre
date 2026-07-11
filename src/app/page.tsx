@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 import { fetchRentalCategories, fetchClothingList } from '@/lib/api/rentals'
+import { JsonLd } from '@/components/shared/JsonLd'
+import { SITE } from '@/lib/config/site'
+import { ROUTES } from '@/lib/constants/routes'
 import { HeroSection } from '@/features/home/HeroSection'
 import { BrandManifesto } from '@/features/home/BrandManifesto'
 import { CategoryDiscovery } from '@/features/home/CategoryDiscovery'
@@ -32,6 +35,49 @@ export const metadata: Metadata = {
  * Data-driven sections (categories / featured / lookbook) omit themselves
  * cleanly when there is nothing real to show — never fake inventory.
  */
+// Derived from the real, already-used SITE.address ("Bến Tre, Việt Nam") —
+// never a separately invented locality/country.
+const [ADDRESS_LOCALITY, ADDRESS_COUNTRY] = SITE.address.split(',').map((part) => part.trim())
+
+const homeJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITE.url}/#organization`,
+      name: SITE.name,
+      url: SITE.url,
+      logo: `${SITE.url}/apple-icon`,
+      description: SITE.description,
+    },
+    {
+      '@type': 'LocalBusiness',
+      '@id': `${SITE.url}/#localbusiness`,
+      name: SITE.name,
+      url: SITE.url,
+      description: SITE.description,
+      image: `${SITE.url}/opengraph-image`,
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: ADDRESS_LOCALITY,
+        addressCountry: ADDRESS_COUNTRY,
+      },
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE.url}/#website`,
+      name: SITE.name,
+      url: SITE.url,
+      inLanguage: 'vi-VN',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: `${SITE.url}${ROUTES.weddingDresses}?search={search_term_string}`,
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  ],
+}
+
 export default async function HomePage() {
   const [categories, featured, recent] = await Promise.all([
     fetchRentalCategories().catch(() => []),
@@ -45,6 +91,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={homeJsonLd} />
       <HeroSection />
       <BrandManifesto />
       <CategoryDiscovery categories={categories} />

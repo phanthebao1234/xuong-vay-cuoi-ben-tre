@@ -27,12 +27,6 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       {
-        // Development placeholders only — remove before content launch
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        pathname: '/**',
-      },
-      {
         // Production: shared Cloudflare R2 public CDN (same bucket as FOXIE)
         protocol: 'https',
         hostname: 'pub-4b45369859cb496d95edad074d1b5110.r2.dev',

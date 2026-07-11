@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { fetchClothingDetail, fetchClothingList } from '@/lib/api/rentals'
 import { ApiError } from '@/lib/api/client'
-import { resolveMediaUrl } from '@/lib/utils/media'
+import { buildProductMetadata } from '@/lib/utils/productMetadata'
 import { ProductDetail } from '@/features/clothing/ProductDetail'
 import { ROUTES } from '@/lib/constants/routes'
 import { SUIT_CATEGORY_SLUG } from '@/lib/constants/categories'
@@ -40,24 +40,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params
   const { product } = await getProduct(slug)
   if (!product) return { title: 'Không tìm thấy thiết kế', robots: { index: false } }
-
-  const description = product.description
-    ? product.description.slice(0, 160)
-    : `${product.name} — thiết kế ${product.category_name ?? 'vest cưới'} tại Xưởng Váy Cưới Bến Tre. Đặt lịch thử trực tiếp tại showroom.`
-
-  const cover = product.images.find((img) => img.is_cover) ?? product.images[0]
-
-  return {
-    title: product.name,
-    description,
-    alternates: { canonical: `/suits/${product.slug}` },
-    openGraph: {
-      title: product.name,
-      description,
-      type: 'website',
-      ...(cover ? { images: [{ url: resolveMediaUrl(cover.file_url) }] } : {}),
-    },
-  }
+  return buildProductMetadata(product, `/suits/${product.slug}`, 'vest cưới')
 }
 
 export default async function SuitDetailPage({ params }: PageProps) {

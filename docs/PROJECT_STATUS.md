@@ -1,7 +1,23 @@
 # Project Status — Xưởng Váy Cưới Bến Tre
 
 > Update this file after every meaningful development batch.
-> Last updated: **2026-07-10** (Appointment honeypot spam guard implemented, uncommitted)
+> Last updated: **2026-07-10** (JSON-LD, Product OG fallback, and final production cleanup implemented, uncommitted)
+
+## Production Readiness: ~98%
+All planned engineering work for launch is implemented and locally verified: full catalog browsing (collections/listing/detail across wedding dresses/suits/áo dài), the appointment conversion flow with spam mitigation, and the SEO/social foundation (favicon, sitemap, robots, OG images with a working fallback, structured data). The remaining ~2% is deployment execution and FOXIE-owned infrastructure changes — not frontend engineering. See the deployment checklist and known issues below.
+
+## JSON-LD & Final SEO Cleanup (2026-07-10)
+- Organization + LocalBusiness + WebSite JSON-LD on the homepage (one `@graph` script tag) — every field from real `SITE` config (address parsed from the existing `SITE.address` string), plus a real `SearchAction` pointing at the working `/wedding-dresses?search=` feature. No reviews, ratings, geo, hours, or phone — none exist in verified data, all correctly omitted rather than invented.
+- Product JSON-LD on all three product-detail routes via the shared `ProductDetail` component — name/sku/url/offers (price, availability mapped from real status, `businessFunction: LeaseOut` for the rental model); `description`/`image`/`category`/`material`/`color`/`size` each included only when the underlying field is non-empty.
+- **Fixed the Product Detail OG-image fallback gap** flagged in the SEO Foundation batch below: extracted the duplicated `generateMetadata` logic across the three product-detail routes into one shared `src/lib/utils/productMetadata.ts` helper, which now always sets an OG image — the real cover photo when one exists, else the site's branded `/opengraph-image` — instead of silently omitting the property when a product has 0 images.
+- Removed the unused `images.unsplash.com` dev-placeholder remote pattern from `next.config.ts` (confirmed zero references remained anywhere in the codebase before removing).
+
+## Remaining Deployment Checklist
+1. Review and commit the three uncommitted batches (JSON-LD, OG fallback, this cleanup).
+2. Create the Vercel project; set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_SITE_URL` (real domain — not yet chosen) in its environment.
+3. FOXIE-owned: add this site's real domain to `CORS_ALLOWED_ORIGINS` on Railway (approval-gated, see Known Issues).
+4. Deploy, then verify against the real production build: metadata/OG/JSON-LD render with the real domain, `/sitemap.xml` and `/robots.txt` resolve, appointment form submits end-to-end.
+5. Content prerequisite (FOXIE Admin, unblocked independently of deploy): categories + products for vest/áo dài, real product photography — today's catalog is 1 product with 0 images.
 
 ## Appointment Honeypot (2026-07-10)
 - Hidden `company` field in `AppointmentForm` — off-screen positioning (not `display:none`/`visibility:hidden`, which some bots specifically check for and skip), `aria-hidden` + `tabIndex={-1}`, `autoComplete="off"`. Value travels to `/api/appointment` alongside the real payload (never added to the typed `LeadSubmitPayload`).
@@ -10,7 +26,7 @@
 - Verified: honeypot unreachable via tab/screen-reader, normal submissions unaffected, filled honeypot returns safe generic success without hitting FOXIE, double-submit guard and existing validation-error UI both intact, zero console errors/overflow at 375px.
 
 ## Current Phase
-**Phase 7 committed (`e397909`), pushed. SEO foundation batch implemented → awaiting review, then a controlled commit.**
+**Phases 0–7 committed and pushed through `e95c673` (honeypot). JSON-LD, Product OG fallback, and final cleanup implemented → awaiting review, then a controlled commit.**
 
 ## SEO Foundation (2026-07-10)
 - `src/app/icon.tsx` / `apple-icon.tsx` — generated (Next `ImageResponse`, no external asset) charcoal/champagne "X" monogram, 32×32 and 180×180.
@@ -108,12 +124,12 @@
 - Nothing blocking development. Launch-time dependency: CORS env-var addition on Railway (Phase 10, approval required).
 
 ## Planned (next)
-1. Review Phase 7 (`/appointment`), then a controlled commit (approval required)
-2. CORS: add this site's domain (and, for continued local testing against prod, the dev origin) to FOXIE's `CORS_ALLOWED_ORIGINS` on Railway — approval-gated env var change, needed before any client-side POST can reach FOXIE directly (currently mitigated via the `/api/appointment` proxy, which needs no CORS change)
-3. Content prerequisite (via FOXIE Admin): categories for vest / áo dài, `is_featured` flags, cover images, and product photography
+1. Review and commit the JSON-LD / OG-fallback / cleanup batch (approval required) — see Remaining Deployment Checklist above.
+2. CORS: add this site's real domain (and, for continued local testing against prod, the dev origin) to FOXIE's `CORS_ALLOWED_ORIGINS` on Railway — approval-gated env var change, FOXIE-owned.
+3. Content prerequisite (via FOXIE Admin): categories for vest / áo dài, `is_featured` flags, cover images, and product photography.
 
 ## Production Status
-Not deployed. Git repository initialized 2026-07-09 (`main`); GitHub remote `origin` connected. Pushed commits through Phase 6 (`3b81d6f`). Phase 7 work is implemented but **uncommitted**. No Vercel project yet.
+Not deployed. Git repository initialized 2026-07-09 (`main`); GitHub remote `origin` connected. Pushed commits through honeypot spam protection (`e95c673`). JSON-LD, Product OG fallback, and this cleanup batch are implemented and locally verified but **uncommitted**. No Vercel project yet.
 
 ## API Dependencies
 - `GET /rentals/categories/`, `GET /rentals/clothing/` (+filters), `GET /rentals/clothing/{slug}/` — public, verified
@@ -121,12 +137,18 @@ Not deployed. Git repository initialized 2026-07-09 (`main`); GitHub remote `ori
 - `POST /bookings/submit/` — public, verified but not used (see Phase 7 rationale above)
 
 ## Known Issues
-- Backend gaps inherited from FOXIE (not fixable here): public serializer exposes internal lifecycle fields — confirmed as of 2026-07-10 to include `purchase_date`, `purchase_price`, `last_rental_date`, `rental_count`, `sold_date`, `sold_price`, `retirement_reason`, `quantity`, **and (newly confirmed) `archived_at`, `created_by`** (the detail serializer uses `fields = '__all__'`); no color/size/price-range server filters; no availability calendar; **no submit throttling on `/leads/submit/` or `/bookings/submit/`** (confirmed — no `DEFAULT_THROTTLE_CLASSES` anywhere in FOXIE settings; a public form is exposed to unlimited automated submission, backend-owned fix). Details: API_INTEGRATION.md §2.
-- `CORS_ALLOWED_ORIGINS` on Railway does not yet include this site's origin — confirmed empirically 2026-07-10 (see Phase 7 above). All client-side POSTs must go through this app's own `/api/*` proxy routes until that env var is updated (approval-gated, FOXIE-owned).
+
+### FOXIE-owned (not fixable from this project)
+- **CORS:** `CORS_ALLOWED_ORIGINS` on Railway does not yet include this site's origin — confirmed empirically 2026-07-10. All client-side POSTs must go through this app's own `/api/*` proxy routes until that env var is updated (approval-gated).
+- **No submit throttling** on `/leads/submit/` or `/bookings/submit/` — confirmed, no `DEFAULT_THROTTLE_CLASSES` anywhere in FOXIE settings; a public form is exposed to unlimited automated submission (frontend honeypot mitigates spam creation, not volume/DoS).
+- **Internal lifecycle field over-exposure:** public clothing serializers leak `purchase_date`, `purchase_price`, `last_rental_date`, `rental_count`, `sold_date`, `sold_price`, `retirement_reason`, `quantity`, `archived_at`, `created_by` (detail serializer uses `fields = '__all__'`) — never rendered here. Details: API_INTEGRATION.md §2.
+
+### Frontend / content (fixable here or content-gated)
 - Category taxonomy depends on production content that doesn't exist yet — only one `RentalCategory` (`vay`) exists in production, so `/wedding-dresses` shows the full catalog rather than a pinned category (see Phase 4 note above).
 - The Phase 5 gallery (multi-image grid + lightbox) and related-designs section are only verified against synthetic/mocked data this session — real production data is a single product with 0 images and no category siblings, so neither has been exercised by real traffic yet.
-- Header/footer nav links to `/rental`, `/about`, `/contact` still 404 until their phases ship — intentional during development. `?product={slug}` context on `/appointment` links now does something (Phase 7); `/contact` still doesn't exist.
+- No color/size/price-range server filters, no availability calendar (backend capability gaps, v1 ships without them).
+- Header/footer nav links to `/rental`, `/about`, `/contact` still 404 until their phases ship — intentional during development.
 - Header `transparent` variant is implemented but unused until the Phase 2 hero; per-route variant wiring (route group or prop) decided in Phase 2.
 
 ## Next Recommended Action
-Review `/appointment` (form, proxy route, CORS finding), approve a controlled commit, push. Separately, raise the CORS env-var change and submit-throttling gaps with FOXIE for approval — both are backend-owned, outside this project's authority to fix.
+Review and approve a controlled commit for JSON-LD + Product OG fallback + this cleanup batch, then push. Separately, raise the CORS env-var change and submit-throttling gaps with FOXIE for approval — both are backend-owned, outside this project's authority to fix. After that, proceed down the Remaining Deployment Checklist above.

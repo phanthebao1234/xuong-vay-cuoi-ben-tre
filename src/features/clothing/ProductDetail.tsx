@@ -7,8 +7,11 @@ import { ProductCard, STATUS_LABELS } from '@/components/ui/ProductCard'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ProductGallery } from './ProductGallery'
+import { JsonLd } from '@/components/shared/JsonLd'
 import { ROUTES } from '@/lib/constants/routes'
+import { SITE } from '@/lib/config/site'
 import { formatPrice } from '@/lib/utils/format'
+import { resolveMediaUrl } from '@/lib/utils/media'
 
 interface ProductDetailProps {
   /** null = the clothing detail API failed — distinct from an API-confirmed unknown slug (that's a 404, handled by the route) */
@@ -85,8 +88,41 @@ export function ProductDetail({
   const hasMaterial = Boolean(product.material.trim())
   const hasSpecs = product.colors.length > 0 || product.sizes.length > 0 || hasMaterial
 
+  const productUrl = `${SITE.url}${detailPath(product.slug)}`
+  const cover = product.images.find((img) => img.is_cover) ?? product.images[0]
+  const coverUrl = cover ? resolveMediaUrl(cover.file_url) : null
+  const absoluteCoverUrl = coverUrl
+    ? coverUrl.startsWith('http')
+      ? coverUrl
+      : `${SITE.url}${coverUrl}`
+    : null
+
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    sku: product.code,
+    url: productUrl,
+    ...(product.description ? { description: product.description } : {}),
+    ...(absoluteCoverUrl ? { image: absoluteCoverUrl } : {}),
+    ...(product.category_name ? { category: product.category_name } : {}),
+    ...(hasMaterial ? { material: product.material } : {}),
+    ...(product.colors.length > 0 ? { color: product.colors.join(', ') } : {}),
+    ...(product.sizes.length > 0 ? { size: product.sizes.join(', ') } : {}),
+    brand: { '@type': 'Brand', name: SITE.name },
+    offers: {
+      '@type': 'Offer',
+      url: productUrl,
+      priceCurrency: 'VND',
+      price: product.rental_price,
+      availability: isAvailable ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      businessFunction: 'https://purl.org/goodrelations/v1#LeaseOut',
+    },
+  }
+
   return (
     <>
+      <JsonLd data={productJsonLd} />
       <Section tone="cream" className="pb-0 pt-8 md:pt-10">
         <Container width="wide">
           <Breadcrumb product={product} listingPath={listingPath} breadcrumbFallbackLabel={breadcrumbFallbackLabel} />

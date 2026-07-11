@@ -8,25 +8,16 @@ Cross-project rules: [`D:\LEARN\WORKSPACE.md`](../WORKSPACE.md)
 
 ## 0. Session Start Protocol
 
-Every session must:
+The architecture is established and stable — sessions no longer default to a full project audit.
 
-1. Read this file fully.
-2. Read docs/ARCHITECTURE.md, docs/PROJECT_STATUS.md, docs/DESIGN_SYSTEM.md, docs/API_INTEGRATION.md, docs/ROADMAP.md.
-3. Run:
-   ```
-   git branch --show-current
-   git fetch origin
-   git status -sb
-   git status --short
-   git log --oneline -10
-   ```
-4. Inspect the current implementation before proposing changes.
-5. Identify unrelated working-tree changes and preserve them.
-6. Audit before modifying. Never trust the snapshot in §19 over live `git status`.
-7. Make the smallest logical change.
-8. Run verification (`npx tsc --noEmit`, `npm run lint`, `npm run build` when production behavior changes).
-9. Report before commit.
-10. **Never commit, push, or deploy without explicit user approval.**
+At the start of a session:
+
+1. Verify git state: `git branch --show-current`, `git status -sb`, `git status --short`.
+2. Read docs/PROJECT_STATUS.md.
+3. Read only the files required for the requested task (§20, Mode 2).
+4. Begin implementation.
+
+Do not proactively re-read this file's companion docs (ARCHITECTURE/DESIGN_SYSTEM/API_INTEGRATION/ROADMAP) or re-inspect unrelated code at session start — only in **Architecture Mode** (§20), when the task actually calls for it. **Never trust the snapshot in §19 over live `git status`.** **Never commit, push, or deploy without explicit user approval**, regardless of mode.
 
 ## 1. Project Overview
 
@@ -90,7 +81,7 @@ Luxury Editorial Bridal Fashion. Tokens: ivory `#FBF9F4`, warm-white `#FFFDF9`, 
 
 **Implemented:** `/` (production homepage, 10 editorial sections, ISR 5m) · `/collections` (index over real categories, ISR 5m) · `/collections/[slug]` (dynamic: hero + grid + prev/next pagination; unknown slug → 404 only when API confirms; API failure → degraded editorial state) · `/wedding-dresses` + `/suits` + `/ao-dai` (dynamic listings sharing one `WeddingDressListing` component via config props — `/wedding-dresses` shows the full catalog unpinned; `/suits` and `/ao-dai` pin to `SUIT_CATEGORY_SLUG`/`AO_DAI_CATEGORY_SLUG` in `src/lib/constants/categories.ts`, resolved against the live categories API; category absent → EmptyState, never `notFound()`) · `/wedding-dresses/[slug]` + `/suits/[slug]` + `/ao-dai/[slug]` (dynamic product detail sharing one `ProductDetail` component via config props; detail routes verify `product.category_slug` matches the route's pinned category before rendering — a product from another category 404s rather than leaking through) · `/appointment` (conversion form — Server Component page + one client form `AppointmentForm`; posts via `src/app/api/appointment/route.ts` same-origin proxy to `POST /leads/submit/`; optional `?product={slug}` context is display-only, never authoritative; honeypot field `company` — off-screen/aria-hidden/tabIndex -1, enforced server-side only in the route handler, which also whitelists the 6 real `LeadPublicSerializer` fields before forwarding) · branded `not-found.tsx`. Global shell wraps all routes; Header renders its `transparent` variant on `/` automatically. Category slugs resolve through the cached categories list — the backend has no slug-retrieve for categories.
 
-**SEO/metadata files (2026-07-10):** `src/app/icon.tsx` / `apple-icon.tsx` (generated monogram favicon, no external asset) · `src/app/opengraph-image.tsx` (1200×630 generated, no remote fetch; auto-reused for Twitter via root `twitter: { card: 'summary_large_image' }`) · `src/app/robots.ts` · `src/app/sitemap.ts` (static + dynamic entries from real categories/clothing, slugs only). All routes inherit the branded OG image via root metadata **except** `/wedding-dresses/[slug]`, `/suits/[slug]`, `/ao-dai/[slug]` when the product has 0 images (their own partial `openGraph` object suppresses inheritance) — known gap, not fixed, see docs/PROJECT_STATUS.md. Verify OG/SEO behavior against `next build && next start`, not `next dev` — dev mode has a route-manifest staleness quirk after adding a root-level file-convention route.
+**SEO/metadata files (2026-07-10):** `src/app/icon.tsx` / `apple-icon.tsx` (generated monogram favicon, no external asset) · `src/app/opengraph-image.tsx` (1200×630 generated, no remote fetch; auto-reused for Twitter via root `twitter: { card: 'summary_large_image' }`) · `src/app/robots.ts` · `src/app/sitemap.ts` (static + dynamic entries from real categories/clothing, slugs only). All routes inherit the branded OG image via root metadata, including `/wedding-dresses/[slug]`, `/suits/[slug]`, `/ao-dai/[slug]` on 0-image products — the shared `src/lib/utils/productMetadata.ts` helper (used by all three routes, replacing what was three duplicated `generateMetadata` bodies) always sets `openGraph.images` explicitly, falling back to `/opengraph-image` when no cover photo exists. Verify OG/SEO behavior against `next build && next start`, not `next dev` — dev mode has a route-manifest staleness quirk after adding a root-level file-convention route. Homepage carries Organization/LocalBusiness/WebSite JSON-LD (`@graph`, real `SITE` config only); product-detail pages carry Product JSON-LD (real fields only, `offers.businessFunction: LeaseOut` for the rental model) — both via `src/components/shared/JsonLd.tsx`.
 **Planned** (purpose/SEO/conversion/API table in docs/ARCHITECTURE.md §5): `/rental`, `/about`, `/contact`.
 `dynamicParams = true` on all detail routes (CMS-created slugs).
 
@@ -129,6 +120,8 @@ inspect first (`git status -sb`, `git diff`) · stage explicit paths only · **n
 
 Any shared backend/API-contract change requires, in order: (1) backend impact analysis, (2) FOXIE frontend regression analysis, (3) this frontend's impact analysis, (4) migration review if applicable, (5) explicit approval. The single anticipated exception at launch: adding this site's domain to `CORS_ALLOWED_ORIGINS` on Railway — an env-var change, still approval-gated.
 
+**Routine frontend work must not inspect FOXIE.** Treat it as a stable, read-only dependency and work from docs/API_INTEGRATION.md. Only read FOXIE source when the task genuinely requires it: API-contract/serializer verification before wiring something new, a backend bug investigation, or an endpoint question docs/API_INTEGRATION.md can't answer. The modification rule above always applies regardless of why you're reading.
+
 ## 14. Deployment (planned)
 
 Separate Vercel project auto-deploying from this repo's `main` (once created) · shared Railway API (untouched) · env vars in Vercel dashboard: `NEXT_PUBLIC_API_URL=https://foxie-production.up.railway.app`, `NEXT_PUBLIC_SITE_URL=<own domain>` · verification: build log → production HTML metadata → API calls cross-origin → smoke test (Roadmap Phases 10–11).
@@ -150,8 +143,10 @@ Separate Vercel project auto-deploying from this repo's `main` (once created) ·
 | Wedding dress product detail | ✅ DONE | Phase 5 (2026-07-10); committed (`29bac2b`), pushed |
 | Suit & áo dài sections | ✅ DONE | Phase 6 (2026-07-10); committed (`3b81d6f`), pushed — content-gated (categories don't exist in production yet) |
 | Appointment conversion flow | ✅ DONE | Phase 7 (2026-07-10); committed (`e397909`), pushed — `/leads/submit/` selected over bookings, see §18 |
-| SEO foundation (favicon/robots/sitemap/OG) | ✅ DONE | 2026-07-10; uncommitted, awaiting review — 0-image product pages don't inherit OG fallback, known gap |
-| Perf / structured data / honeypot | ⏳ PLANNED | Not yet scheduled |
+| SEO foundation (favicon/robots/sitemap/OG) | ✅ DONE | 2026-07-10; committed (`92ead48`), pushed |
+| Appointment honeypot | ✅ DONE | 2026-07-10; committed (`e95c673`), pushed |
+| JSON-LD + Product OG fallback + cleanup | ✅ DONE | 2026-07-10; uncommitted, awaiting review — see §18; Production Ready ≈98% |
+| Perf audit | ⏳ PLANNED | Not yet scheduled |
 | Deployment | ⛔ NOT STARTED | Phases 10–11 |
 | Catalog content | ⛔ MISSING | RentalCategory rows + products needed in FOXIE Admin |
 
@@ -195,6 +190,9 @@ See docs/API_INTEGRATION.md §2 for the full matrix. Headlines: no server-side c
 | 2026-07-10 | `/appointment` posts to `POST /leads/submit/`, not `/bookings/submit/` | Verified from FOXIE source: leads only requires `name`; bookings forces `phone` + `booking_date` + a photography-studio `service_type` enum with no good fit for a dress-fitting inquiry |
 | 2026-07-10 | Client-side form POST routes through a new same-origin `src/app/api/appointment/route.ts` proxy instead of calling FOXIE directly | Empirically confirmed this origin isn't in FOXIE's `CORS_ALLOWED_ORIGINS` — a direct browser POST fails CORS. A server-side proxy sidesteps it correctly (no browser CORS involved) without needing the FOXIE-side env var change; first instance of this pattern, reusable for future public-POST features |
 | 2026-07-10 | Fixed `LeadSubmitPayload` in `src/types/index.ts` — was `full_name` (invented), now `name` (real field); `phone` was wrongly marked required | Pre-existing speculative type predated serializer verification; corrected while auditing the contract for Phase 7 |
+| 2026-07-10 | Extracted the 3 duplicated product-detail `generateMetadata` bodies into one `src/lib/utils/productMetadata.ts` helper | Fixed the 0-image OG-fallback gap in exactly one place instead of three; `openGraph.images` is now always set (cover photo or `/opengraph-image`) rather than sometimes omitted |
+| 2026-07-10 | JSON-LD (`Organization`/`LocalBusiness`/`WebSite` on home, `Product` on detail pages) renders via `dangerouslySetInnerHTML` in `src/components/shared/JsonLd.tsx` | Standard, documented exception to "avoid dangerouslySetInnerHTML" — `application/ld+json` is inert, never executed by the browser; content is escaped (`<` → `<`) to prevent `</script>` breakout from a string value |
+| 2026-07-10 | Removed the `images.unsplash.com` dev-placeholder entry from `next.config.ts` `remotePatterns` | Confirmed zero references anywhere in the codebase; the entry's own comment already flagged it for removal before content launch |
 
 ## 19. Current Working Tree Snapshot
 
@@ -204,12 +202,48 @@ See docs/API_INTEGRATION.md §2 for the full matrix. Headlines: no server-side c
 - Working tree currently **not clean**: Phase 5 (`/wedding-dresses/[slug]`) implemented and verified (`tsc`/`lint`/`build`/`git diff --check` all pass) but uncommitted — modified `src/components/ui/ProductCard.tsx` (exported `STATUS_LABELS`), new `src/app/wedding-dresses/[slug]/page.tsx`, `src/features/clothing/ProductDetail.tsx`, `src/features/clothing/ProductGallery.tsx`. Awaiting review + commit approval.
 - FOXIE working tree (separate repo at `D:\LEARN\foxie`) had its own pre-existing local modifications (`CLAUDE.md`, `PackageDetailHero.tsx`, 3 untracked PNGs) — they belong to FOXIE tasks and must never be touched from here. This session read `backend/apps/rentals/{serializers,views,models}.py` **read-only** for API-contract verification only.
 
-## 20. Development Workflow (Claude Code / Fable 5)
+## 20. Development Workflow — Four Operating Modes (Claude Code / Fable 5)
 
-Every feature: **DISCOVER → AUDIT → PLAN → APPROVAL → IMPLEMENT → STATIC VERIFY → MANUAL UI REVIEW → COMMIT APPROVAL → CONTROLLED COMMIT → REMOTE SAFETY CHECK → PUSH → DEPLOY VERIFY → PRODUCTION SMOKE TEST → UPDATE PROJECT_STATUS.md → UPDATE CLAUDE.md IF ARCHITECTURE CHANGED.**
+Optimized for a stable, established codebase: minimize token/context spend on routine work while preserving the safety gates that actually matter (approval before commit/push/deploy, FOXIE read-only, no invented data/fields). Pick the mode the task calls for — **default to Mode 2**.
 
-- Large features: never jump from request to implementation — inspect code, report findings, propose a plan, wait for approval, then implement.
-- Small isolated bug fixes: audit → implement → verify → report (unless the user asks for a planning phase).
+### Mode 1 — Architecture
+
+**Use only for:** new module/architecture design, large refactors, production-readiness or security audits, roadmap work, or updating CLAUDE.md / PROJECT_STATUS.md.
+**Allowed:** read broadly — multiple folders, all companion docs, API contracts, cross-cutting architecture.
+**Forbidden:** writing production code unless explicitly requested.
+
+### Mode 2 — Implementation (default)
+
+**Use for:** implementing one approved task.
+**Rules:** read only what that task needs — directly affected components, required shared utilities, relevant types/constants. Normally under 10 files. Never inspect unrelated folders or routes, never re-audit the whole project, never re-read every doc. Never inspect FOXIE unless the task genuinely depends on it (§13). Reuse existing architecture; never redesign unrelated features. Report in the concise format below.
+
+### Mode 3 — Verification
+
+**Use for:** verifying an implementation before commit.
+**Run only:** `npx tsc --noEmit`, `npm run lint`, `npm run build`, `git diff --check`. Review only the changed files. Do not re-audit unrelated code or re-open architecture questions. Do not re-read CLAUDE.md unless documentation itself changed.
+
+### Mode 4 — Release
+
+**Use for:** commit, push, deploy, smoke test, production verification.
+**Rules:** read only deployment-related files — no architecture review, no implementation changes in this mode. Follow §12 Git Safety exactly. **Never commit, push, or deploy without explicit user approval.**
+
+### Documentation reread rule
+
+CLAUDE.md and its companion docs are not re-read every task — assume the documented architecture remains valid. Re-open them only in Mode 1: when updating documentation, or when architecture/roadmap/project status actually changes.
+
+### Token optimization
+
+Every Mode 2 task minimizes context: no full-project rereads, no repeating prior audits, no recounting project history, no inspecting unchanged or unrelated folders/routes. Match read scope to the approved task, not the whole codebase.
+
+### Report format (Modes 2–3)
+
+Concise, **max 250 words**, unless the user explicitly asks for more detail:
+
+1. Files changed
+2. Summary
+3. Verification
+4. Known issues
+5. Next action
 
 ## 21. Implementation Safety Rules
 
